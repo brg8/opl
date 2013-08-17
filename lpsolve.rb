@@ -1,42 +1,8 @@
 require "rglpk"
 
-# maximize
-#   z = 10 * x1 + 6 * x2 + 4 * x3
-#
-# subject to
-#   p:      x1 +     x2 +     x3 <= 100
-#   q: 10 * x1 + 4 * x2 + 5 * x3 <= 600
-#   r:  2 * x1 + 2 * x2 + 6 * x3 <= 300
-#
-# where all variables are non-negative
-#   x1 >= 0, x2 >= 0, x3 >= 0
-
-=begin
-
-maximize("10x1 + 6x2 + 4x3",
-subject_to(["p: x1 + x2 + x3 <= 100",
-"q: 10x1 + 4x2 + 5x3 <= 600",
-"r: 2x1 + 2x2 + 6x3 <= 300",
-"s: x1 >= 0",
-"t: x2 >= 0",
-"u: x3 >= 0"]))
-
-=end
-
-#The basic task is to parse an equation into it's parts:
-#coefficients (+-), variables, relationships (<=, =>, =, <, >)
-	#left side, right side
-#just deal with integer coefficients for now
-
-#equation.lhs.coefficients
-#equation.lhs.variables
-#equation.rhs.coefficients
-#equation.rhs.variables
-#equation.relationship
-
-#to rebuild equation:
-#equation.lhs.build = equation.lhs.coefficients.zip(equation.lhs.variables).join("+")
-#equation.lhs.build+equation.relationship+equation.rhs.build
+#TODO
+#handle all relationships (<, >, =, <=, >=)
+#handle constants in constraints and objectives
 
 def sides(equation)
 	if equation.include?("<")
@@ -64,9 +30,9 @@ def add_ones(equation)
 		elsif p.include?("#")
 			q = p.gsub("#","#1*")
 		end
-		equation = equation.gsub(p,q).gsub("#","")
+		equation = equation.gsub(p,q)
 	end
-	equation
+	equation.gsub("#","")
 end
 
 def coefficients(equation)#parameter is one side of the equation
@@ -83,71 +49,95 @@ def variables(equation)#parameter is one side of the equation
 	equation.scan(/[a-z]+[\d]*/)
 end
 
-def elements(equation)
-	letters = "abcdefghijklmnopqrstuvwxyz".split("")
-	numbers = "1234567890".split("")
-	#types are coefficient, variable, operator, relationship (c, v, o, r)
-	equation = equation.gsub(" ","")
-	equation.each do |char|
-		if ["+","-","*"].include?(char)
-			#operator
-		elsif ["<=",">=","=","<",">"].include?(char)
-			#relationship
-		else
-			if currently_parsing_variable
-				#variable
-			elsif currently_parsing_coefficient
-				#coefficient
-			elsif letters.include?(char)
-				#variable
-			elsif numbers.include?(char)
-				#coefficient
-			end
-		end
+class LinearProgram
+	attr_accessor :objective
+	attr_accessor :constraints
+	attr_accessor :rows
+
+	def initialize(objective, constraints)
+		@objective = objective
+		@constraints = constraints
+		@rows = []
+	end
+end
+
+class Objective
+	attr_accessor :function
+	attr_accessor :optimization#minimize, maximize, equals
+	attr_accessor :variable_coefficient_pairs
+
+	def initialize(function, optimization)
+		@function = function
+		@optimization = optimization
+	end
+end
+
+class VariableCoefficientPair
+	attr_accessor :variable
+	attr_accessor :coefficient
+
+	def initialize(variable, coefficient)
+		@variable = variable
+		@coefficient = coefficient
 	end
 end
 
 class Row
 	attr_accessor :name
+	attr_accessor :constraint
 	attr_accessor :lower_bound
 	attr_accessor :upper_bound
-	attr_accessor :coefficients
+	attr_accessor :variable_coefficient_pairs
 
 	def initialize(name, lower_bound, upper_bound)
 		@name = name
 		@lower_bound = lower_bound
 		@upper_bound = upper_bound
+		@variable_coefficient_pairs = []
 	end
 end
 
-class Column
-	attr_accessor :name
-	attr_accessor :lower_bound
-	attr_accessor :upper_bound
-
-	def initialize(name, lower_bound, upper_bound)
-		@name = name
-		@lower_bound = lower_bound
-		@upper_bound = upper_bound
+def get_all_vars(constraints)
+	all_vars = []
+	constraints.each do |constraint|
+		constraint = constraint.gsub(" ", "")
+		value = constraint.split(":")[1] || constraint
+		all_vars << variables(value)
 	end
+	all_vars.flatten.uniq
 end
 
 def subject_to(constraints)
+	all_vars = get_all_vars(constraints)
 	rows = []
 	constraints.each do |constraint|
 		constraint = constraint.gsub(" ", "")
 		name = constraint.split(":")[0]
-		value = constraint.split(":")[1] rescue constraint
+		value = constraint.split(":")[1] || constraint
 		lower_bound = value.split(">=")[1] rescue nil
 		upper_bound = value.split("<=")[1] rescue nil
+		coefs = coefficients(sides(value)[:lhs])
+		vars = variables(sides(value)[:lhs])
+		zero_coef_vars = all_vars - vars
 		row = Row.new(name, lower_bound, upper_bound)
-		row.coefficients = coefficients(sides(value)[:lhs])
+		row.constraint = constraint
+		coefs = coefs + zero_coef_vars.map{|z|0}
+		vars = vars + zero_coef_vars
+		zipped = vars.zip(coefs)
+		pairs = []
+		all_vars.each do |var|
+			coef = coefs[vars.index(var)]
+			pairs << VariableCoefficientPair.new(var, coef)
+		end
+		row.variable_coefficient_pairs = pairs
 		rows << row
 	end
 	rows
 end
 
 def maximize(objective, rows_c)#objective function has no = in it
+	lp = LinearProgram.new(objective, rows_c.map{|row|row.constraint})
+	lp.rows = rows_c
 	p = Rglpk::Problem.new
 	p.name = "sample"
 	p.obj.dir = Rglpk::GLP_MAX
@@ -158,16 +148,24 @@ def maximize(objective, rows_c)#objective function has no = in it
 		rows[i].set_bounds(Rglpk::GLP_UP, 0.0, row.upper_bound) unless row.upper_bound.nil?
 		rows[i].set_bounds(Rglpk::GLP_LO, 0.0, row.lower_bound) unless row.lower_bound.nil?
 	end
-	obj_coefficients = coefficients(objective.gsub(" ","")).map{|c|c.to_i}
-	vars = variables(objective.gsub(" ",""))
+	vars = rows_c.first.variable_coefficient_pairs.map{|vcp|vcp.variable}
 	cols = p.add_cols(vars.size)
 	vars.each_index do |i|
 		column_name = vars[i]
 		cols[i].name = column_name
 		cols[i].set_bounds(Rglpk::GLP_LO, 0.0, 0.0)
 	end
-	p.obj.coefs = obj_coefficients
-	p.set_matrix(rows_c.map{|row|row.coefficients.map{|c|c.to_i}}.flatten)
+	all_vars = rows_c.first.variable_coefficient_pairs.map{|vcp|vcp.variable}
+	obj_coefficients = coefficients(objective.gsub(" ","")).map{|c|c.to_i}
+	obj_vars = variables(objective.gsub(" ",""))
+	all_obj_coefficients = []
+	all_vars.each do |var|
+		i = obj_vars.index(var)
+		coef = i.nil? ? 0 : obj_coefficients[i]
+		all_obj_coefficients << coef
+	end
+	p.obj.coefs = all_obj_coefficients
+	p.set_matrix(rows_c.map{|row|row.variable_coefficient_pairs.map{|vcp|vcp.coefficient.to_i}}.flatten)
 	p.simplex
 	z = p.obj.get
 	answer = Hash.new()
