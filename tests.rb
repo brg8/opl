@@ -38,4 +38,17 @@ describe "lpsolve" do
 		solution["y"].to_f.round(2).should eq 0.67
 		solution["z"].to_f.round(2).should eq 0.0
 	end
+
+	it "solves problem 3" do
+		solution = minimize(
+			"a - x4",
+		subject_to([
+			"a + x4 >= 4",
+			"a + x4 <= 10"
+		]))
+		solution["a"].to_f.round(2).should eq 0.0
+		solution["x4"].to_f.round(2).should eq 10.0
+	end
+
+	#have one here that has a constant in it
 end

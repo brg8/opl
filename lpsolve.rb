@@ -1,8 +1,9 @@
 require "rglpk"
 
 #TODO
-#handle all relationships (<, >, =, <=, >=)
-#handle constants in constraints and objectives
+#all relationships (<, >, =, <=, >=)
+#constants in constraints and objectives
+#minimize
 
 def sides(equation)
 	if equation.include?("<")
@@ -107,19 +108,39 @@ def get_all_vars(constraints)
 	all_vars.flatten.uniq
 end
 
+def negate_if_necessary(constraint)
+	if constraint.include?(">=")
+	end
+end
+
 def subject_to(constraints)
 	all_vars = get_all_vars(constraints)
 	rows = []
 	constraints.each do |constraint|
+		negate = false
 		constraint = constraint.gsub(" ", "")
 		name = constraint.split(":")[0]
 		value = constraint.split(":")[1] || constraint
-		lower_bound = value.split(">=")[1] rescue nil
-		upper_bound = value.split("<=")[1] rescue nil
+		if value.include?("<=")
+			upper_bound = value.split("<=")[1]
+		elsif value.include?(">=")
+			negate = true
+			bound = value.split(">=")[1].to_i
+			upper_bound = (bound*-1).to_s
+		end
 		coefs = coefficients(sides(value)[:lhs])
+		if negate
+			coefs = coefs.map do |coef|
+				if coef.include?("+")
+					coef.gsub("+", "-")
+				elsif coef.include?("-")
+					coef.gsub("-", "+")
+				end
+			end
+		end
 		vars = variables(sides(value)[:lhs])
 		zero_coef_vars = all_vars - vars
-		row = Row.new(name, lower_bound, upper_bound)
+		row = Row.new(name, nil, upper_bound)
 		row.constraint = constraint
 		coefs = coefs + zero_coef_vars.map{|z|0}
 		vars = vars + zero_coef_vars
@@ -136,11 +157,23 @@ def subject_to(constraints)
 end
 
 def maximize(objective, rows_c)#objective function has no = in it
+	optimize("maximize", objective, rows_c)
+end
+
+def minimize(objective, rows_c)#objective function has no = in it
+	optimize("minimize", objective, rows_c)
+end
+
+def optimize(optimization, objective, rows_c)
 	lp = LinearProgram.new(objective, rows_c.map{|row|row.constraint})
 	lp.rows = rows_c
 	p = Rglpk::Problem.new
 	p.name = "sample"
-	p.obj.dir = Rglpk::GLP_MAX
+	if optimization == "maximize"
+		p.obj.dir = Rglpk::GLP_MAX
+	elsif optimization == "minimize"
+		p.obj.dir = Rglpk::GLP_MIN
+	end
 	rows = p.add_rows(rows_c.size)
 	rows_c.each_index do |i|
 		row = rows_c[i]
