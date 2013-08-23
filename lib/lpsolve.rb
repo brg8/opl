@@ -1,9 +1,18 @@
 require "rglpk"
 
 #TODO
+#forall and summation statements
+	#blocks?
+	#in order to handle sums and foralls we need the
+	#ability to add "subs" for things like
+	#"x sub 1,3" To do this I am using this notation:
+	#x[1][3]
+#a matrix representation of the solution if using
+	#sub notation
 #all relationships (<, >, =, <=, >=)
 #constants in constraints and objectives
-#minimize
+#float coefficients and constants
+#write as module
 
 def sides(equation)
 	if equation.include?("<")
@@ -47,13 +56,14 @@ end
 
 def variables(equation)#parameter is one side of the equation
 	equation = add_ones(equation)
-	equation.scan(/[a-z]+[\d]*/)
+	equation.scan(/[a-z\[]+[\d]*[\]]*/)
 end
 
 class LinearProgram
 	attr_accessor :objective
 	attr_accessor :constraints
 	attr_accessor :rows
+	attr_accessor :solution
 
 	def initialize(objective, constraints)
 		@objective = objective
@@ -73,16 +83,6 @@ class Objective
 	end
 end
 
-class VariableCoefficientPair
-	attr_accessor :variable
-	attr_accessor :coefficient
-
-	def initialize(variable, coefficient)
-		@variable = variable
-		@coefficient = coefficient
-	end
-end
-
 class Row
 	attr_accessor :name
 	attr_accessor :constraint
@@ -98,6 +98,16 @@ class Row
 	end
 end
 
+class VariableCoefficientPair
+	attr_accessor :variable
+	attr_accessor :coefficient
+
+	def initialize(variable, coefficient)
+		@variable = variable
+		@coefficient = coefficient
+	end
+end
+
 def get_all_vars(constraints)
 	all_vars = []
 	constraints.each do |constraint|
@@ -108,12 +118,8 @@ def get_all_vars(constraints)
 	all_vars.flatten.uniq
 end
 
-def negate_if_necessary(constraint)
-	if constraint.include?(">=")
-	end
-end
-
 def subject_to(constraints)
+	constraints = constraints.flatten
 	all_vars = get_all_vars(constraints)
 	rows = []
 	constraints.each do |constraint|
@@ -205,5 +211,6 @@ def optimize(optimization, objective, rows_c)
 	cols.each do |c|
 		answer[c.name] = c.get_prim.to_s
 	end
-	answer
+	lp.solution = answer
+	lp
 end

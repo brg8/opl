@@ -1,5 +1,5 @@
 require "rspec"
-require "./lpsolve"
+require "./lib/lpsolve"
 
 describe "lpsolve" do
 	before :all do
@@ -9,7 +9,7 @@ describe "lpsolve" do
 	end
 
 	it "solves problem 1" do
-		solution = maximize(
+		lp = maximize(
 			"10x1 + 6x2 + 4x3",
 		subject_to([
 			"p: x1 + x2 + x3 <= 100",
@@ -19,13 +19,13 @@ describe "lpsolve" do
 			"t: x2 >= 0",
 			"u: x3 >= 0"
 		]))
-		solution["x1"].to_f.round(2).should eq 33.33
-		solution["x2"].to_f.round(2).should eq 66.67
-		solution["x3"].to_f.round(2).should eq 0.0
+		lp.solution["x1"].to_f.round(2).should eq 33.33
+		lp.solution["x2"].to_f.round(2).should eq 66.67
+		lp.solution["x3"].to_f.round(2).should eq 0.0
 	end
 
 	it "solves problem 2" do
-		solution = maximize(
+		lp = maximize(
 			"x + y - z",
 		subject_to([
 			"x + 2y <= 3",
@@ -34,20 +34,48 @@ describe "lpsolve" do
 			"y >= 0",
 			"z >= 0"
 		]))
-		solution["x"].to_f.round(2).should eq 1.67
-		solution["y"].to_f.round(2).should eq 0.67
-		solution["z"].to_f.round(2).should eq 0.0
+		lp.solution["x"].to_f.round(2).should eq 1.67
+		lp.solution["y"].to_f.round(2).should eq 0.67
+		lp.solution["z"].to_f.round(2).should eq 0.0
 	end
 
 	it "solves problem 3" do
-		solution = minimize(
+		lp = minimize(
 			"a - x4",
 		subject_to([
 			"a + x4 >= 4",
 			"a + x4 <= 10"
 		]))
-		solution["a"].to_f.round(2).should eq 0.0
-		solution["x4"].to_f.round(2).should eq 10.0
+		lp.solution["a"].to_f.round(2).should eq 0.0
+		lp.solution["x4"].to_f.round(2).should eq 10.0
+	end
+
+	it "solves problem 4" do
+		lp = maximize(
+			"x[1] + y + x[3]",
+		subject_to([
+			"x[1] + x[3] <= 3",
+			"y <= 4",
+		]))
+		lp.solution["x[1]"].to_f.round(2).should eq 3.0
+		lp.solution["x[3]"].to_f.round(2).should eq 0.0
+		lp.solution["y"].to_f.round(2).should eq 4.0
+	end
+
+	it "solves problem 5" do
+		lp = minimize(
+			"sum(i in 0:3, x[i])",
+		subject_to([
+			"x[1] + x[2] <= 3"
+		]))
+	end
+
+	it "solves problem 6" do
+		lp = minimize(
+			"sum(i in 0:3, j in 0:2, x[i][j])",
+		subject_to([
+			"x[1][0] + x[2][2] <= 3"
+		]))
 	end
 
 	#have one here that has a constant in it
