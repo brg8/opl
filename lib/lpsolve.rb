@@ -2,13 +2,9 @@ require "rglpk"
 
 #TODO
 #forall and summation statements
-	#blocks?
-	#in order to handle sums and foralls we need the
-	#ability to add "subs" for things like
-	#"x sub 1,3" To do this I am using this notation:
-	#x[1][3]
 #a matrix representation of the solution if using
 	#sub notation
+#multiple level sub notation e.g. x[1][[3]]
 #all relationships (<, >, =, <=, >=)
 #constants in constraints and objectives
 #float coefficients and constants
@@ -43,6 +39,80 @@ def add_ones(equation)
 		equation = equation.gsub(p,q)
 	end
 	equation.gsub("#","")
+end
+
+def paren_to_array(text)
+	#in: "(2..5)"
+	#out: "[2,3,4,5]"
+	start = text[1].to_i
+	stop = text[-2].to_i
+	(start..stop).map{|i|i}.to_s
+end
+
+def sub_paren_with_array(text)
+	targets = text.scan(/\([\d]+\.\.[\d]+\)/)
+	targets.each do |target|
+		text = text.gsub(target, paren_to_array(target))
+	end
+	return(text)
+end
+
+def mass_product(array_of_arrays, base=[])
+	return(base) if array_of_arrays.empty?
+	array = array_of_arrays[0]
+	new_array_of_arrays = array_of_arrays - [array]
+	if base==[]
+		mass_product(new_array_of_arrays, array)
+	else
+		mass_product(new_array_of_arrays, base.product(array).map{|e|e.flatten})
+	end
+end
+
+def sum(text)
+	#in: "i in [0,1], j in [4,-5], 3x[i][j]"
+	#out: "3x[0][4] + 3x[0][-5] + 3x[1][4] + 3x[1][-5]"
+	text = sub_paren_with_array(text)
+	final_text = ""
+	element = text.split(",")[-1].gsub(" ","")
+	indices = text.scan(/[a-z] in/).map{|sc|sc[0]}
+	values = text.scan(/\s\[[\-\s\d+,]+\]/).map{|e|e.gsub(" ", "").scan(/[\-\d]+/)}
+	index_value_pairs = indices.zip(values)
+	variable = text.scan(/[a-z]\[/)[0].gsub("[","")
+	coefficient_a = text.split(",")[-1].scan(/\-?[\d\*]+[a-z]/)
+	if coefficient_a.empty?
+		if element.include?("-")
+			coefficient = "-1"
+		else
+			coefficient = "1"
+		end
+	else
+		coefficient = coefficient_a[0].scan(/[\d\-]+/)
+	end
+	value_combinations = mass_product(values)
+	value_combinations.each_index do |vc_index|
+		value_combination = value_combinations[vc_index]
+		e = element
+		value_combination = [value_combination] unless value_combination.is_a?(Array)
+		value_combination.each_index do |i|
+			index = indices[i]
+			value = value_combination[i]
+			e = e.gsub(index, value)
+		end
+		e = "+"+e unless (coefficient.include?("-") || vc_index==0)
+		final_text += e
+	end
+	final_text
+end
+
+def sub_sum(equation)
+	#in: "sum(i in (0..3), x[i]) <= 100"
+	#out: "x[0]+x[1]+x[2]+x[3] <= 100"
+	sums = equation.scan(/sum\([\s\.\d\S]+\)/)
+	sums.each do |text|
+		result = sum(text[4..-2])
+		equation = equation.gsub(text, result)
+	end
+	return(equation)
 end
 
 def coefficients(equation)#parameter is one side of the equation
@@ -120,6 +190,9 @@ end
 
 def subject_to(constraints)
 	constraints = constraints.flatten
+	constraints.map do |constraint|
+		sub_sum(constraint)
+	end
 	all_vars = get_all_vars(constraints)
 	rows = []
 	constraints.each do |constraint|

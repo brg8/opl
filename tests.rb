@@ -64,7 +64,7 @@ describe "lpsolve" do
 
 	it "solves problem 5" do
 		lp = minimize(
-			"sum(i in 0:3, x[i])",
+			"sum(i in [0,1,2,3], x[i])",
 		subject_to([
 			"x[1] + x[2] <= 3"
 		]))
@@ -72,7 +72,28 @@ describe "lpsolve" do
 
 	it "solves problem 6" do
 		lp = minimize(
-			"sum(i in 0:3, j in 0:2, x[i][j])",
+			"sum(i in (0..3), x[i])",
+		subject_to([
+			"x[1] + x[2] <= 3"
+		]))
+	end
+
+	it "solves problem 7" do
+		lp = minimize(
+			"z + sum(i in (0..3), x[i])",
+		subject_to([
+			"x[1] + x[2] <= 3",
+			"z >= 3",
+			"x[0] >= 0",
+			"x[1] >= 0",
+			"x[2] >= 0",
+			"x[3] >= 0"
+		]))
+	end
+
+	it "solves problem 8" do
+		lp = minimize(
+			"sum(i in (0..3), j in [0,1,2], x[i][j])",
 		subject_to([
 			"x[1][0] + x[2][2] <= 3"
 		]))
