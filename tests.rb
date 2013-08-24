@@ -102,7 +102,7 @@ describe "lpsolve" do
 		lp = minimize(
 			"sum(i in (0..1), j in [0,1], x[i][j])",
 		subject_to([
-			"x[1][0] + x[1][1] >= 3",
+			"sum(j in (0..1), x[1][j]) >= 3",
 			"x[1][0] >= 1",
 			"x[1][0] <= 1",
 			"x[0][0] + x[0][1] >= 0"
@@ -111,6 +111,33 @@ describe "lpsolve" do
 		lp.solution["x[1][1]"].to_f.round(2).should eq 2.0
 		lp.solution["x[0][0]"].to_f.round(2).should eq 0.0
 		lp.solution["x[0][1]"].to_f.round(2).should eq 0.0
+	end
+
+	it "solves problem 9" do
+		lp = minimize(
+			"sum(i in (0..1), j in [0,1], x[i][j])",
+		subject_to([
+			"sum(i in (0..1), j in [0,1], x[i][j]) >= 10"
+		]))
+		(lp.solution=={"x[0][0]"=>"10.0", "x[0][1]"=>"0.0", "x[1][0]"=>"0.0", "x[1][1]"=>"0.0"}).should eq true
+	end
+
+	it "solves problem 10" do
+		lp = minimize(
+			"sum(i in (0..3), x[i])",
+		subject_to([
+			"sum(i in (0..1), x[i]) + sum(i in [2,3], 2x[i]) >= 20"
+		]))
+		(lp.solution=={"x[0]"=>"0.0", "x[1]"=>"0.0", "x[2]"=>"10.0", "x[3]"=>"0.0"}).should eq true
+	end
+
+	it "solves problem 11" do
+		lp = minimize(
+			"sum(i in (0..3), j in (2..3), x[i] + 4x[j])",
+		subject_to([
+			"sum(i in (0..1), j in (0..3), 2x[i] - 3x[j]) >= 20"
+		]))
+		(lp.solution=={"x[0]"=>"10.0", "x[1]"=>"0.0", "x[2]"=>"0.0", "x[3]"=>"0.0"}).should eq true
 	end
 
 	#have one here that has a constant in it

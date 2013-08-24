@@ -1,7 +1,7 @@
 require "rglpk"
 
 #TODO
-#forall and summation statements
+#forall statement
 #a matrix representation of the solution if using
 	#sub notation
 #multiple level sub notation e.g. x[1][[3]]
@@ -60,7 +60,7 @@ end
 def mass_product(array_of_arrays, base=[])
 	return(base) if array_of_arrays.empty?
 	array = array_of_arrays[0]
-	new_array_of_arrays = array_of_arrays - [array]
+	new_array_of_arrays = array_of_arrays[1..-1]
 	if base==[]
 		mass_product(new_array_of_arrays, array)
 	else
@@ -78,9 +78,9 @@ def sum(text)
 	values = text.scan(/\s\[[\-\s\d+,]+\]/).map{|e|e.gsub(" ", "").scan(/[\-\d]+/)}
 	index_value_pairs = indices.zip(values)
 	variable = text.scan(/[a-z]\[/)[0].gsub("[","")
-	coefficient_a = text.split(",")[-1].scan(/\-?[\d\*]+[a-z]/)
+	coefficient_a = text.split(",")[-1].split("[")[0].scan(/\-?[\d\*]+[a-z]/)
 	if coefficient_a.empty?
-		if element.include?("-")
+		if text.split(",")[-1].split("[")[0].include?("-")
 			coefficient = "-1"
 		else
 			coefficient = "1"
@@ -107,10 +107,10 @@ end
 def sub_sum(equation)
 	#in: "sum(i in (0..3), x[i]) <= 100"
 	#out: "x[0]+x[1]+x[2]+x[3] <= 100"
-	sums = equation.scan(/sum\([\s\.\d\S]+\)/)
+	sums = (equation+"#").split("sum(").map{|ee|ee.split(")")[0..-2].join(")")}.find_all{|eee|eee!=""}
 	sums.each do |text|
-		result = sum(text[4..-2])
-		equation = equation.gsub(text, result)
+		result = sum(text)
+		equation = equation.gsub("sum("+text+")", result)
 	end
 	return(equation)
 end
@@ -190,7 +190,7 @@ end
 
 def subject_to(constraints)
 	constraints = constraints.flatten
-	constraints.map do |constraint|
+	constraints = constraints.map do |constraint|
 		sub_sum(constraint)
 	end
 	all_vars = get_all_vars(constraints)
