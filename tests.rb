@@ -66,37 +66,51 @@ describe "lpsolve" do
 		lp = minimize(
 			"sum(i in [0,1,2,3], x[i])",
 		subject_to([
-			"x[1] + x[2] <= 3"
+			"x[1] + x[2] >= 3",
+			"x[0] >= 0",
+			"x[3] >= 0"
 		]))
+		(lp.solution=={"x[1]"=>"3.0", "x[2]"=>"0.0", "x[0]"=>"0.0", "x[3]"=>"0.0"}).should eq true
 	end
 
 	it "solves problem 6" do
 		lp = minimize(
 			"sum(i in (0..3), x[i])",
 		subject_to([
-			"x[1] + x[2] <= 3"
+			"x[1] + x[2] >= 3",
+			"x[0] >= 0",
+			"x[3] >= 0"
 		]))
+		(lp.solution=={"x[1]"=>"3.0", "x[2]"=>"0.0", "x[0]"=>"0.0", "x[3]"=>"0.0"}).should eq true
 	end
 
 	it "solves problem 7" do
 		lp = minimize(
 			"z + sum(i in (0..3), x[i])",
 		subject_to([
-			"x[1] + x[2] <= 3",
+			"x[1] + x[2] >= 3",
 			"z >= 3",
 			"x[0] >= 0",
 			"x[1] >= 0",
 			"x[2] >= 0",
 			"x[3] >= 0"
 		]))
+		(lp.solution=={"x[1]"=>"3.0", "x[2]"=>"0.0", "z"=>"3.0", "x[0]"=>"0.0", "x[3]"=>"0.0"}).should eq true
 	end
 
 	it "solves problem 8" do
 		lp = minimize(
-			"sum(i in (0..3), j in [0,1,2], x[i][j])",
+			"sum(i in (0..1), j in [0,1], x[i][j])",
 		subject_to([
-			"x[1][0] + x[2][2] <= 3"
+			"x[1][0] + x[1][1] >= 3",
+			"x[1][0] >= 1",
+			"x[1][0] <= 1",
+			"x[0][0] + x[0][1] >= 0"
 		]))
+		lp.solution["x[1][0]"].to_f.round(2).should eq 1.0
+		lp.solution["x[1][1]"].to_f.round(2).should eq 2.0
+		lp.solution["x[0][0]"].to_f.round(2).should eq 0.0
+		lp.solution["x[0][1]"].to_f.round(2).should eq 0.0
 	end
 
 	#have one here that has a constant in it

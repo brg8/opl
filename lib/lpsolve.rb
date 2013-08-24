@@ -126,7 +126,7 @@ end
 
 def variables(equation)#parameter is one side of the equation
 	equation = add_ones(equation)
-	equation.scan(/[a-z\[]+[\d]*[\]]*/)
+	equation.scan(/[a-z]+[\[\]\d]*/)
 end
 
 class LinearProgram
@@ -245,6 +245,7 @@ end
 
 def optimize(optimization, objective, rows_c)
 	lp = LinearProgram.new(objective, rows_c.map{|row|row.constraint})
+	objective = sub_sum(objective)
 	lp.rows = rows_c
 	p = Rglpk::Problem.new
 	p.name = "sample"
