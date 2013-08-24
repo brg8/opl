@@ -1,6 +1,9 @@
 require "rglpk"
 
 #TODO
+#if there is a forall statement and a sum statement
+	#in the same constraint, we need a way
+	#to handle
 #forall statement
 #a matrix representation of the solution if using
 	#sub notation
@@ -65,6 +68,50 @@ def mass_product(array_of_arrays, base=[])
 		mass_product(new_array_of_arrays, array)
 	else
 		mass_product(new_array_of_arrays, base.product(array).map{|e|e.flatten})
+	end
+end
+
+def forall(text)
+	#assume that any summation statements inside the forall
+		#statement have already been handled
+	#in: "forall(i in (0..2), x[i] <= 5)"
+	#out: ["x[0] <= 5", "x[1] <= 5", "x[2] <= 5"]
+	text = sub_paren_with_array(text)
+	final_constraints = []
+	constraint = text.split(",")[-1].gsub(" ","")
+	indices = text.scan(/[a-z] in/).map{|sc|sc[0]}
+	values = text.scan(/\s\[[\-\s\d+,]+\]/).map{|e|e.gsub(" ", "").scan(/[\-\d]+/)}
+	index_value_pairs = indices.zip(values)
+	variable = text.scan(/[a-z]\[/)[0].gsub("[","")
+	#will need to make this multiple variables??
+		#or is this even used at all????
+	value_combinations = mass_product(values)
+	value_combinations.each_index do |vc_index|
+		value_combination = value_combinations[vc_index]
+		e = constraint
+		value_combination = [value_combination] unless value_combination.is_a?(Array)
+		value_combination.each_index do |i|
+			index = indices[i]
+			value = value_combination[i]
+			e = e.gsub(index, value)
+		end
+		final_constraints += [e]
+	end
+	final_constraints
+end
+
+def sub_forall(equation)
+	#in: "forall(i in (0..2), x[i] <= 5)"
+	#out: ["x[0] <= 5", "x[1] <= 5", "x[2] <= 5"]
+	foralls = (equation+"#").split("forall(").map{|ee|ee.split(")")[0..-2].join(")")}.find_all{|eee|eee!=""}
+	constraints = []
+	if foralls.empty?
+		return(equation)
+	else
+		foralls.each do |text|
+			constraints << forall(text)
+		end
+		return(constraints.flatten)
 	end
 end
 
@@ -193,6 +240,9 @@ def subject_to(constraints)
 	constraints = constraints.map do |constraint|
 		sub_sum(constraint)
 	end
+	constraints = constraints.map do |constraint|
+		sub_forall(constraint)
+	end.flatten
 	all_vars = get_all_vars(constraints)
 	rows = []
 	constraints.each do |constraint|
