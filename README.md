@@ -1,15 +1,5 @@
-Meant to solve simple linear optimization problems. By simple I mean that there are no forall or summation statements.
+Linear Programming syntax modeled after OPL Studio. The syntax is intuitive and easy to use. E.g.
 
-You can write out your optimization problem in a syntactically pleasant way. For example:
+forall(i in (3..5), sum(j in (2..4), x[i][j]) <= i)
 
-solution = 
-maximize(
-	"10x1 + 6x2 + 4x3",
-subject_to([
-	"p: x1 + x2 + x3 <= 100",
-	"q: 10x1 + 4x2 + 5x3 <= 600",
-	"r: 2x1 + 2x2 + 6x3 <= 300",
-	"s: x1 >= 0",
-	"t: x2 >= 0",
-	"u: x3 >= 0"
-]))
+I try to keep the tests extensive and up to date, so take a look for more examples.
