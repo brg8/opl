@@ -151,7 +151,15 @@ describe "lpsolve" do
 		lp.solution["x[2]"].to_f.round(2).should eq 5.0
 	end
 
-	#forall(i in [0..3], sum(j in (i..5), x[j][i]) => i)
+	it "solves problem 13" do
+		lp = minimize(
+			"sum(i in (0..3), j in (0..3), x[i][j])",
+		subject_to([
+			"forall(i in (0..3), sum(j in (i..3), x[i][j]) >= i)",
+			"forall(i in (0..3), sum(j in (0..i), x[i][j]) >= i)"
+		]))
+		(lp.solution=={"x[0][0]"=>"0.0", "x[0][1]"=>"0.0", "x[0][2]"=>"0.0", "x[0][3]"=>"0.0", "x[1][1]"=>"1.0", "x[1][2]"=>"0.0", "x[1][3]"=>"0.0", "x[2][2]"=>"2.0", "x[2][3]"=>"0.0", "x[3][3]"=>"3.0", "x[1][0]"=>"0.0", "x[2][0]"=>"0.0", "x[2][1]"=>"0.0", "x[3][0]"=>"0.0", "x[3][1]"=>"0.0", "x[3][2]"=>"0.0"}).should eq true
+	end
 
 	#have one here that has a constant in it
 end

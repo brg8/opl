@@ -4,6 +4,9 @@ require "rglpk"
 #if there is a forall statement and a sum statement
 	#in the same constraint, we need a way
 	#to handle
+#need to be able to handle arithmetic operations
+	#within a constraint or index
+		#e.g. sum(i in (1..3), x[i-1])
 #forall statement
 #a matrix representation of the solution if using
 	#sub notation
@@ -72,13 +75,11 @@ def mass_product(array_of_arrays, base=[])
 end
 
 def forall(text)
-	#assume that any summation statements inside the forall
-		#statement have already been handled
-	#in: "forall(i in (0..2), x[i] <= 5)"
+	#need to be able to handle sums inside here
+	#in: "i in (0..2), x[i] <= 5"
 	#out: ["x[0] <= 5", "x[1] <= 5", "x[2] <= 5"]
 	text = sub_paren_with_array(text)
 	final_constraints = []
-	constraint = text.split(",")[-1].gsub(" ","")
 	indices = text.scan(/[a-z] in/).map{|sc|sc[0]}
 	values = text.scan(/\s\[[\-\s\d+,]+\]/).map{|e|e.gsub(" ", "").scan(/[\-\d]+/)}
 	index_value_pairs = indices.zip(values)
@@ -88,21 +89,40 @@ def forall(text)
 	value_combinations = mass_product(values)
 	value_combinations.each_index do |vc_index|
 		value_combination = value_combinations[vc_index]
-		e = constraint
 		value_combination = [value_combination] unless value_combination.is_a?(Array)
+		if text.include?("sum")
+			constraint = "sum"+text.split("sum")[1..-1].join("sum")
+		else
+			constraint = text.split(",")[-1].gsub(" ","")
+		end
+		e = constraint
 		value_combination.each_index do |i|
 			index = indices[i]
 			value = value_combination[i]
-			e = e.gsub(index, value)
+			e = e.gsub("("+index, "("+value)
+			e = e.gsub(index+")", value+")")
+			e = e.gsub("["+index, "["+value)
+			e = e.gsub(index+"]", value+"]")
+			e = e.gsub("=>"+index, "=>"+value)
+			e = e.gsub("<="+index, "<="+value)
+			e = e.gsub(">"+index, ">"+value)
+			e = e.gsub("<"+index, "<"+value)
+			e = e.gsub("="+index, "="+value)
+			e = e.gsub("=> "+index, "=> "+value)
+			e = e.gsub("<= "+index, "<= "+value)
+			e = e.gsub("> "+index, "> "+value)
+			e = e.gsub("< "+index, "< "+value)
+			e = e.gsub("= "+index, "= "+value)
 		end
 		final_constraints += [e]
 	end
 	final_constraints
 end
 
-def sub_forall(equation)
+def sub_forall(equation, indexvalues={:indices => [], :values => []})
 	#in: "forall(i in (0..2), x[i] <= 5)"
 	#out: ["x[0] <= 5", "x[1] <= 5", "x[2] <= 5"]
+	return equation unless equation.include?("forall")
 	foralls = (equation+"#").split("forall(").map{|ee|ee.split(")")[0..-2].join(")")}.find_all{|eee|eee!=""}
 	constraints = []
 	if foralls.empty?
@@ -115,14 +135,22 @@ def sub_forall(equation)
 	end
 end
 
-def sum(text)
+def sum(text, indexvalues={:indices => [], :values => []})
 	#in: "i in [0,1], j in [4,-5], 3x[i][j]"
 	#out: "3x[0][4] + 3x[0][-5] + 3x[1][4] + 3x[1][-5]"
 	text = sub_paren_with_array(text)
 	final_text = ""
 	element = text.split(",")[-1].gsub(" ","")
 	indices = text.scan(/[a-z] in/).map{|sc|sc[0]}
+	input_indices = indexvalues[:indices] - indices
+	if not input_indices.empty?
+		input_values = input_indices.map{|ii|indexvalues[:values][indexvalues[:indices].index(ii)]}
+	else
+		input_values = []
+	end
 	values = text.scan(/\s\[[\-\s\d+,]+\]/).map{|e|e.gsub(" ", "").scan(/[\-\d]+/)}
+	indices += input_indices
+	values += input_values
 	index_value_pairs = indices.zip(values)
 	variable = text.scan(/[a-z]\[/)[0].gsub("[","")
 	coefficient_a = text.split(",")[-1].split("[")[0].scan(/\-?[\d\*]+[a-z]/)
@@ -143,7 +171,20 @@ def sum(text)
 		value_combination.each_index do |i|
 			index = indices[i]
 			value = value_combination[i]
-			e = e.gsub(index, value)
+			e = e.gsub("("+index, "("+value)
+			e = e.gsub(index+")", value+")")
+			e = e.gsub("["+index, "["+value)
+			e = e.gsub(index+"]", value+"]")
+			e = e.gsub("=>"+index, "=>"+value)
+			e = e.gsub("<="+index, "<="+value)
+			e = e.gsub(">"+index, ">"+value)
+			e = e.gsub("<"+index, "<"+value)
+			e = e.gsub("="+index, "="+value)
+			e = e.gsub("=> "+index, "=> "+value)
+			e = e.gsub("<= "+index, "<= "+value)
+			e = e.gsub("> "+index, "> "+value)
+			e = e.gsub("< "+index, "< "+value)
+			e = e.gsub("= "+index, "= "+value)
 		end
 		e = "+"+e unless (coefficient.include?("-") || vc_index==0)
 		final_text += e
@@ -151,11 +192,33 @@ def sum(text)
 	final_text
 end
 
-def sub_sum(equation)
+def sub_sum(equation, indexvalues={:indices => [], :values => []})
 	#in: "sum(i in (0..3), x[i]) <= 100"
 	#out: "x[0]+x[1]+x[2]+x[3] <= 100"
-	sums = (equation+"#").split("sum(").map{|ee|ee.split(")")[0..-2].join(")")}.find_all{|eee|eee!=""}
+	sums = (equation+"#").split("sum(").map{|ee|ee.split(")")[0..-2].join(")")}.find_all{|eee|eee!=""}.find_all{|eeee|!eeee.include?("forall")}
 	sums.each do |text|
+		e = text
+		unless indexvalues[:indices].empty?
+			indexvalues[:indices].each_index do |i|
+				index = indexvalues[:indices][i]
+				value = indexvalues[:values][i].to_s
+				e = e.gsub("("+index, "("+value)
+				e = e.gsub(index+")", value+")")
+				e = e.gsub("["+index, "["+value)
+				e = e.gsub(index+"]", value+"]")
+				e = e.gsub("=>"+index, "=>"+value)
+				e = e.gsub("<="+index, "<="+value)
+				e = e.gsub(">"+index, ">"+value)
+				e = e.gsub("<"+index, "<"+value)
+				e = e.gsub("="+index, "="+value)
+				e = e.gsub("=> "+index, "=> "+value)
+				e = e.gsub("<= "+index, "<= "+value)
+				e = e.gsub("> "+index, "> "+value)
+				e = e.gsub("< "+index, "< "+value)
+				e = e.gsub("= "+index, "= "+value)
+			end
+		end
+		equation = equation.gsub(text, e)
 		result = sum(text)
 		equation = equation.gsub("sum("+text+")", result)
 	end
@@ -238,11 +301,11 @@ end
 def subject_to(constraints)
 	constraints = constraints.flatten
 	constraints = constraints.map do |constraint|
-		sub_sum(constraint)
-	end
-	constraints = constraints.map do |constraint|
 		sub_forall(constraint)
 	end.flatten
+	constraints = constraints.map do |constraint|
+		sub_sum(constraint)
+	end
 	all_vars = get_all_vars(constraints)
 	rows = []
 	constraints.each do |constraint|
