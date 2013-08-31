@@ -1,5 +1,5 @@
 require "rspec"
-require "./lib/lpsolve"
+require "./lib/opl.rb"
 
 describe "lpsolve" do
 	before :all do

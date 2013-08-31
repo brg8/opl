@@ -1,13 +1,15 @@
 require "rglpk"
 
 #TODO
-#if there is a forall statement and a sum statement
-	#in the same constraint, we need a way
-	#to handle
+#my next goal should be handling all basic constraints
+	#forget foralls and sums for a second
+	#just allow the user to write a linear
+		#model in a pleasant syntax
+#make sure extreme cases of foralls and sums
+	#are handled
 #need to be able to handle arithmetic operations
 	#within a constraint or index
 		#e.g. sum(i in (1..3), x[i-1])
-#forall statement
 #a matrix representation of the solution if using
 	#sub notation
 #multiple level sub notation e.g. x[1][[3]]
