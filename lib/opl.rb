@@ -5,17 +5,18 @@ require "rglpk"
 	#forget foralls and sums for a second
 	#just allow the user to write a linear
 		#model in a pleasant syntax
-#make sure extreme cases of foralls and sums
-	#are handled
+#all relationships (<, >, =, <=, >=)
+#constants in constraints and objectives
+#float coefficients and constants
 #need to be able to handle arithmetic operations
 	#within a constraint or index
 		#e.g. sum(i in (1..3), x[i-1])
 #a matrix representation of the solution if using
 	#sub notation
 #multiple level sub notation e.g. x[1][[3]]
-#all relationships (<, >, =, <=, >=)
-#constants in constraints and objectives
-#float coefficients and constants
+
+#make sure extreme cases of foralls and sums
+	#are handled
 #write as module
 
 def sides(equation)
@@ -300,8 +301,66 @@ def get_all_vars(constraints)
 	all_vars.flatten.uniq
 end
 
+def get_constants(text)
+	#in: "-8 + x + y + 3"
+	#out: "[-8, +3]"
+	text = text.gsub(" ","")
+	text = text+"#"
+	cs = []
+	constants = text.scan(/\d+[^a-z^\[^\]]/)
+	constants.each do |constant|
+		c = constant.scan(/\d+/)[0]
+		index = text.index(constant)
+		if index == 0
+			c = "+"+c
+		else
+			c = text.scan(/[\-\+]#{constant}/)[0]
+		end
+		cs << c.scan(/[\-\+]\d+/)[0]
+	end
+	return({:formatted => cs, :unformatted => constants})
+end
+
+def put_constants_on_rhs(text)
+	#in: "-8 + x + y + 3 <= 100"
+	#out: "x + y <= 100 + 5"
+	text = text.gsub(" ","")
+	s = sides(text)
+	constants_results = get_constants(s[:lhs])
+	constants = constants_results[:formatted]
+	sum = constants.map{|cc|cc.to_i}.inject("+").to_s
+	if sum.include?("-")
+		sum = sum.gsub("-","+")
+	else
+		sum = sum.gsub("+","-")
+	end
+	lhs = s[:lhs].gsub(" ","")+"#"
+	constants_results[:unformatted].each do |constant|
+		index = lhs.index(constant)
+		if index == 0
+			lhs = lhs[(constant.size-1)..(lhs.size-1)]
+		else
+			lhs = lhs[0..(index-2)]+lhs[(index+(constant.size-1))..(lhs.size-1)]
+		end
+	end
+	text = text.gsub(s[:lhs], lhs[0..-2])
+	text += sum
+	return(text)
+end
+
+def sum_constants(text)
+	#in: "100+ 10-3"
+	#out: "107"
+	get_constants(text)[:formatted].map{|c|c.to_i}.inject("+")
+end
+
+def put_variables_on_lhs
+	
+end
+
 def subject_to(constraints)
 	constraints = constraints.flatten
+
 	constraints = constraints.map do |constraint|
 		sub_forall(constraint)
 	end.flatten

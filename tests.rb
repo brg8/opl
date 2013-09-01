@@ -161,5 +161,14 @@ describe "lpsolve" do
 		(lp.solution=={"x[0][0]"=>"0.0", "x[0][1]"=>"0.0", "x[0][2]"=>"0.0", "x[0][3]"=>"0.0", "x[1][1]"=>"1.0", "x[1][2]"=>"0.0", "x[1][3]"=>"0.0", "x[2][2]"=>"2.0", "x[2][3]"=>"0.0", "x[3][3]"=>"3.0", "x[1][0]"=>"0.0", "x[2][0]"=>"0.0", "x[2][1]"=>"0.0", "x[3][0]"=>"0.0", "x[3][1]"=>"0.0", "x[3][2]"=>"0.0"}).should eq true
 	end
 
+	it "solves problem 14" do
+		lp = maximize(
+			"x + 3",
+		subject_to([
+			"x + 9 <= 10"
+		]))
+		lp.solution["x"].to_f.round(2).should eq 1.0
+	end
+
 	#have one here that has a constant in it
 end
