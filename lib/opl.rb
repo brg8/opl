@@ -259,6 +259,7 @@ class Objective
 	attr_accessor :function
 	attr_accessor :optimization#minimize, maximize, equals
 	attr_accessor :variable_coefficient_pairs
+	attr_accessor :optimized_value
 
 	def initialize(function, optimization)
 		@function = function
@@ -307,7 +308,8 @@ def get_constants(text)
 	text = text.gsub(" ","")
 	text = text+"#"
 	cs = []
-	constants = text.scan(/\d+[^a-z^\[^\]]/)
+	potential_constants = text.scan(/\d+[^a-z^\[^\]^\d]/)
+	constants = potential_constants.find_all{|c|![*('a'..'z'),*('A'..'Z')].include?(text[text.index(c)-1])}
 	constants.each do |constant|
 		c = constant.scan(/\d+/)[0]
 		index = text.index(constant)
@@ -332,7 +334,7 @@ def put_constants_on_rhs(text)
 	if sum.include?("-")
 		sum = sum.gsub("-","+")
 	else
-		sum = sum.gsub("+","-")
+		sum = "-"+sum
 	end
 	lhs = s[:lhs].gsub(" ","")+"#"
 	constants_results[:unformatted].each do |constant|
@@ -351,21 +353,69 @@ end
 def sum_constants(text)
 	#in: "100+ 10-3"
 	#out: "107"
-	get_constants(text)[:formatted].map{|c|c.to_i}.inject("+")
+	get_constants(text)[:formatted].map{|c|c.to_i}.inject("+").to_s
 end
 
-def put_variables_on_lhs
-	
+def sub_rhs_with_summed_constants(constraint)
+	rhs = sides(constraint)[:rhs]
+	constraint.gsub(rhs, sum_constants(rhs))
+end
+
+def get_coefficient_variable_pairs(text)
+	text.scan(/\d*[\*]*[a-z]\[*\d*\]*/)
+end
+
+def put_variables_on_lhs(text)
+	#in: "x + y - x[3] <= 3z + 2x[2] - 10"
+	#out: "x + y - x[3] - 3z - 2x[2] <= -10"
+	text = text.gsub(" ", "")
+	s = sides(text.gsub(" ",""))
+	rhs = s[:rhs]
+	lhs = s[:lhs]
+	coefficient_variable_pairs = get_coefficient_variable_pairs(rhs)
+	add_to_left = []
+	remove_from_right = []
+	coefficient_variable_pairs.each do |cvp|
+		index = rhs.index(cvp)
+		if index == 0
+			add_to_left << "-"+cvp
+			remove_from_right << cvp
+		else
+			if rhs[index-1] == "+"
+				add_to_left << "-"+cvp
+				remove_from_right << "+"+cvp
+			else
+				add_to_left << "+"+cvp
+				remove_from_right << "-"+cvp
+			end
+		end
+	end
+	new_lhs = lhs+add_to_left.join("")
+	text = text.gsub(lhs, new_lhs)
+	new_rhs = rhs
+	remove_from_right.each do |rfr|
+		new_rhs = new_rhs.gsub(rfr, "")
+	end
+	text = text.gsub(rhs, new_rhs)
+	return(text)
 end
 
 def subject_to(constraints)
 	constraints = constraints.flatten
-
 	constraints = constraints.map do |constraint|
 		sub_forall(constraint)
 	end.flatten
 	constraints = constraints.map do |constraint|
 		sub_sum(constraint)
+	end
+	constraints = constraints.map do |constraint|
+		put_constants_on_rhs(constraint)
+	end
+	constraints = constraints.map do |constraint|
+		put_variables_on_lhs(constraint)
+	end
+	constraints = constraints.map do |constraint|
+		sub_rhs_with_summed_constants(constraint)
 	end
 	all_vars = get_all_vars(constraints)
 	rows = []
@@ -418,7 +468,8 @@ def minimize(objective, rows_c)#objective function has no = in it
 end
 
 def optimize(optimization, objective, rows_c)
-	lp = LinearProgram.new(objective, rows_c.map{|row|row.constraint})
+	o = Objective.new(objective, optimization)
+	lp = LinearProgram.new(o, rows_c.map{|row|row.constraint})
 	objective = sub_sum(objective)
 	lp.rows = rows_c
 	p = Rglpk::Problem.new
@@ -454,7 +505,7 @@ def optimize(optimization, objective, rows_c)
 	p.obj.coefs = all_obj_coefficients
 	p.set_matrix(rows_c.map{|row|row.variable_coefficient_pairs.map{|vcp|vcp.coefficient.to_i}}.flatten)
 	p.simplex
-	z = p.obj.get
+	lp.objective.optimized_value = p.obj.get
 	answer = Hash.new()
 	cols.each do |c|
 		answer[c.name] = c.get_prim.to_s

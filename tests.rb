@@ -12,12 +12,12 @@ describe "lpsolve" do
 		lp = maximize(
 			"10x1 + 6x2 + 4x3",
 		subject_to([
-			"p: x1 + x2 + x3 <= 100",
-			"q: 10x1 + 4x2 + 5x3 <= 600",
-			"r: 2x1 + 2x2 + 6x3 <= 300",
-			"s: x1 >= 0",
-			"t: x2 >= 0",
-			"u: x3 >= 0"
+			"x1 + x2 + x3 <= 100",
+			"10x1 + 4x2 + 5x3 <= 600",
+			"2x1 + 2x2 + 6x3 <= 300",
+			"x1 >= 0",
+			"x2 >= 0",
+			"x3 >= 0"
 		]))
 		lp.solution["x1"].to_f.round(2).should eq 33.33
 		lp.solution["x2"].to_f.round(2).should eq 66.67
@@ -169,6 +169,4 @@ describe "lpsolve" do
 		]))
 		lp.solution["x"].to_f.round(2).should eq 1.0
 	end
-
-	#have one here that has a constant in it
 end
