@@ -169,4 +169,17 @@ describe "lpsolve" do
 		]))
 		lp.solution["x"].to_f.round(2).should eq 1.0
 	end
+
+	it "solves problem 15" do
+		lp = maximize(
+			"x + y - z",
+		subject_to([
+			"x = 5",
+			"y < 3",
+			"z > 4"
+		]))
+		lp.solution["x"].to_f.round(2).should eq 5.0
+		lp.solution["y"].to_f.round(2).should eq 2.0
+		lp.solution["z"].to_f.round(2).should eq 5.0
+	end
 end

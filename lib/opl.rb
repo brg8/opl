@@ -1,32 +1,39 @@
 require "rglpk"
 
 #TODO
+#1.0
 #my next goal should be handling all basic constraints
 	#forget foralls and sums for a second
 	#just allow the user to write a linear
 		#model in a pleasant syntax
-#all relationships (<, >, =, <=, >=)
 #constants in constraints and objectives
-#float coefficients and constants
+	#I think rglpk cannot handle constants
+	#in the objective on it's own
+
+#2.0
+#make sure extreme cases of foralls and sums
+	#are handled
 #need to be able to handle arithmetic operations
 	#within a constraint or index
 		#e.g. sum(i in (1..3), x[i-1])
 #a matrix representation of the solution if using
 	#sub notation
-#multiple level sub notation e.g. x[1][[3]]
 
-#make sure extreme cases of foralls and sums
-	#are handled
+#3.0
+#multiple level sub notation e.g. x[1][[3]]
+#float coefficients and constants (does rglpk even handle this?)
+	#will have to figure out "<" and ">"
+	
 #write as module
 
 def sides(equation)
-	if equation.include?("<")
+	if equation.include?("<=")
 		char = "<="
-	elsif equation.include?(">")
+	elsif equation.include?(">=")
 		char = ">="
-	elsif equation.include?("<=")
+	elsif equation.include?("<")
 		char = "<"
-	elsif equation.include?("<=")
+	elsif equation.include?(">")
 		char = ">"
 	elsif equation.include?("=")
 		char = "="
@@ -330,23 +337,25 @@ def put_constants_on_rhs(text)
 	s = sides(text)
 	constants_results = get_constants(s[:lhs])
 	constants = constants_results[:formatted]
-	sum = constants.map{|cc|cc.to_i}.inject("+").to_s
-	if sum.include?("-")
-		sum = sum.gsub("-","+")
-	else
-		sum = "-"+sum
-	end
-	lhs = s[:lhs].gsub(" ","")+"#"
-	constants_results[:unformatted].each do |constant|
-		index = lhs.index(constant)
-		if index == 0
-			lhs = lhs[(constant.size-1)..(lhs.size-1)]
+	unless constants.empty?
+		sum = constants.map{|cc|cc.to_i}.inject("+").to_s
+		if sum.include?("-")
+			sum = sum.gsub("-","+")
 		else
-			lhs = lhs[0..(index-2)]+lhs[(index+(constant.size-1))..(lhs.size-1)]
+			sum = "-"+sum
 		end
+		lhs = s[:lhs].gsub(" ","")+"#"
+		constants_results[:unformatted].each do |constant|
+			index = lhs.index(constant)
+			if index == 0
+				lhs = lhs[(constant.size-1)..(lhs.size-1)]
+			else
+				lhs = lhs[0..(index-2)]+lhs[(index+(constant.size-1))..(lhs.size-1)]
+			end
+		end
+		text = text.gsub(s[:lhs], lhs[0..-2])
+		text += sum
 	end
-	text = text.gsub(s[:lhs], lhs[0..-2])
-	text += sum
 	return(text)
 end
 
@@ -400,8 +409,23 @@ def put_variables_on_lhs(text)
 	return(text)
 end
 
+def split_equals(constraint)
+	[constraint.gsub("=", "<="), constraint.gsub("=", ">=")]
+end
+
+def split_equals_a(constraints)
+	constraints.map do |constraint|
+		if (constraint.split("") & ["<=",">=","<",">"]).empty?
+			split_equals(constraint)
+		else
+			constraint
+		end
+	end.flatten
+end
+
 def subject_to(constraints)
 	constraints = constraints.flatten
+	constraints = split_equals_a(constraints)
 	constraints = constraints.map do |constraint|
 		sub_forall(constraint)
 	end.flatten
@@ -424,11 +448,18 @@ def subject_to(constraints)
 		constraint = constraint.gsub(" ", "")
 		name = constraint.split(":")[0]
 		value = constraint.split(":")[1] || constraint
+		lower_bound = nil
 		if value.include?("<=")
 			upper_bound = value.split("<=")[1]
 		elsif value.include?(">=")
 			negate = true
 			bound = value.split(">=")[1].to_i
+			upper_bound = (bound*-1).to_s
+		elsif value.include?("<")
+			upper_bound = (value.split("<")[1]).to_i - 1
+		elsif value.include?(">")
+			negate = true
+			bound = (value.split(">")[1].to_i).to_i + 1
 			upper_bound = (bound*-1).to_s
 		end
 		coefs = coefficients(sides(value)[:lhs])
@@ -443,7 +474,7 @@ def subject_to(constraints)
 		end
 		vars = variables(sides(value)[:lhs])
 		zero_coef_vars = all_vars - vars
-		row = Row.new(name, nil, upper_bound)
+		row = Row.new(name, lower_bound, upper_bound)
 		row.constraint = constraint
 		coefs = coefs + zero_coef_vars.map{|z|0}
 		vars = vars + zero_coef_vars
