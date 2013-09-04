@@ -13,12 +13,11 @@ require "rglpk"
 	#sub notation
 
 #3.0
+#will have to figure out "<" and ">"
 #make sure extreme cases of foralls and sums
 	#are handled
 #multiple level sub notation e.g. x[1][[3]]
-#float coefficients and constants (does rglpk even handle this?)
-	#will have to figure out "<" and ">"
-	
+
 #write as module
 
 def sides(equation)
@@ -233,9 +232,9 @@ end
 def coefficients(equation)#parameter is one side of the equation
 	equation = add_ones(equation)
 	if equation[0]=="-"
-		equation.scan(/[+-]\d+/)
+		equation.scan(/[+-][\d\.]+/)
 	else
-		("#"+equation).scan(/[#+-]\d+/).map{|e|e.gsub("#","+")}
+		("#"+equation).scan(/[#+-][\d\.]+/).map{|e|e.gsub("#","+")}
 	end
 end
 
@@ -310,18 +309,18 @@ def get_constants(text)
 	text = text.gsub(" ","")
 	text = text+"#"
 	cs = []
-	potential_constants = text.scan(/\d+[^a-z^\[^\]^\d^\.^\)]/)
+	potential_constants = text.scan(/[\d\.]+[^a-z^\[^\]^\d^\.^\)]/)
 	#potential_constants = text.scan(/\d+[^a-z^\[^\]^\d]/)
 	constants = potential_constants.find_all{|c|![*('a'..'z'),*('A'..'Z')].include?(text[text.index(c)-1])}
 	constants.each do |constant|
-		c = constant.scan(/\d+/)[0]
+		c = constant.scan(/[\d\.]+/)[0]
 		index = text.index(constant)
 		if index == 0
 			c = "+"+c
 		else
 			c = text.scan(/[\-\+]#{constant}/)[0]
 		end
-		cs << c.scan(/[\-\+]\d+/)[0]
+		cs << c.scan(/[\-\+][\d\.]+/)[0]
 	end
 	return({:formatted => cs, :unformatted => constants})
 end
@@ -334,7 +333,7 @@ def put_constants_on_rhs(text)
 	constants_results = get_constants(s[:lhs])
 	constants = constants_results[:formatted]
 	unless constants.empty?
-		sum = constants.map{|cc|cc.to_i}.inject("+").to_s
+		sum = constants.map{|cc|cc.to_f}.inject("+").to_s
 		if sum.include?("-")
 			sum = sum.gsub("-","+")
 		else
@@ -358,7 +357,12 @@ end
 def sum_constants(text)
 	#in: "100+ 10-3"
 	#out: "107"
-	get_constants(text)[:formatted].map{|c|c.to_i}.inject("+").to_s
+	constants = get_constants(text)[:formatted]
+	if constants.to_s.include?(".")
+		constants.map{|c|c.to_f}.inject("+").to_s
+	else
+		constants.map{|c|c.to_i}.inject("+").to_s
+	end
 end
 
 def sub_rhs_with_summed_constants(constraint)
@@ -449,13 +453,13 @@ def subject_to(constraints)
 			upper_bound = value.split("<=")[1]
 		elsif value.include?(">=")
 			negate = true
-			bound = value.split(">=")[1].to_i
+			bound = value.split(">=")[1].to_f
 			upper_bound = (bound*-1).to_s
 		elsif value.include?("<")
-			upper_bound = (value.split("<")[1]).to_i - 1
+			upper_bound = (value.split("<")[1]).to_f - 1
 		elsif value.include?(">")
 			negate = true
-			bound = (value.split(">")[1].to_i).to_i + 1
+			bound = (value.split(">")[1]).to_f + 1
 			upper_bound = (bound*-1).to_s
 		end
 		coefs = coefficients(sides(value)[:lhs])
@@ -527,7 +531,7 @@ def optimize(optimization, objective, rows_c)
 		cols[i].set_bounds(Rglpk::GLP_LO, 0.0, 0.0)
 	end
 	all_vars = rows_c.first.variable_coefficient_pairs.map{|vcp|vcp.variable}
-	obj_coefficients = coefficients(objective.gsub(" ","")).map{|c|c.to_i}
+	obj_coefficients = coefficients(objective.gsub(" ","")).map{|c|c.to_f}
 	obj_vars = variables(objective.gsub(" ",""))
 	all_obj_coefficients = []
 	all_vars.each do |var|
@@ -536,7 +540,7 @@ def optimize(optimization, objective, rows_c)
 		all_obj_coefficients << coef
 	end
 	p.obj.coefs = all_obj_coefficients
-	p.set_matrix(rows_c.map{|row|row.variable_coefficient_pairs.map{|vcp|vcp.coefficient.to_i}}.flatten)
+	p.set_matrix(rows_c.map{|row|row.variable_coefficient_pairs.map{|vcp|vcp.coefficient.to_f}}.flatten)
 	p.simplex
 	lp.objective.optimized_value = p.obj.get + objective_addition.to_f
 	answer = Hash.new()
