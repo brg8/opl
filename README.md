@@ -10,3 +10,13 @@ subject_to([
 ]))
 
 I try to keep the tests up to date, so take a look in there for more examples.
+
+Functionality to come includes forall and summation statements. E.g.
+
+maximize(  
+  "sum(i in (0..3) x[i])",  
+subject_to([  
+  "forall(i in (0..3), x[i] <= 3" 
+]))
+
+Comments are much appreciated.
