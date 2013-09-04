@@ -2,17 +2,10 @@ require "rglpk"
 
 #TODO
 #1.0
-#my next goal should be handling all basic constraints
-	#forget foralls and sums for a second
-	#just allow the user to write a linear
-		#model in a pleasant syntax
-#constants in constraints and objectives
-	#I think rglpk cannot handle constants
-	#in the objective on it's own
 
 #2.0
-#make sure extreme cases of foralls and sums
-	#are handled
+#summing of variables
+	#e.g. x1 + x1 <= 3
 #need to be able to handle arithmetic operations
 	#within a constraint or index
 		#e.g. sum(i in (1..3), x[i-1])
@@ -20,6 +13,8 @@ require "rglpk"
 	#sub notation
 
 #3.0
+#make sure extreme cases of foralls and sums
+	#are handled
 #multiple level sub notation e.g. x[1][[3]]
 #float coefficients and constants (does rglpk even handle this?)
 	#will have to figure out "<" and ">"
@@ -315,7 +310,8 @@ def get_constants(text)
 	text = text.gsub(" ","")
 	text = text+"#"
 	cs = []
-	potential_constants = text.scan(/\d+[^a-z^\[^\]^\d]/)
+	potential_constants = text.scan(/\d+[^a-z^\[^\]^\d^\.^\)]/)
+	#potential_constants = text.scan(/\d+[^a-z^\[^\]^\d]/)
 	constants = potential_constants.find_all{|c|![*('a'..'z'),*('A'..'Z')].include?(text[text.index(c)-1])}
 	constants.each do |constant|
 		c = constant.scan(/\d+/)[0]
@@ -502,6 +498,12 @@ def optimize(optimization, objective, rows_c)
 	o = Objective.new(objective, optimization)
 	lp = LinearProgram.new(o, rows_c.map{|row|row.constraint})
 	objective = sub_sum(objective)
+	objective_constants = get_constants(objective)
+	if objective_constants[:formatted].empty?
+		objective_addition = 0
+	else
+		objective_addition = sum_constants(objective_constants[:formatted].inject("+"))
+	end
 	lp.rows = rows_c
 	p = Rglpk::Problem.new
 	p.name = "sample"
@@ -536,7 +538,7 @@ def optimize(optimization, objective, rows_c)
 	p.obj.coefs = all_obj_coefficients
 	p.set_matrix(rows_c.map{|row|row.variable_coefficient_pairs.map{|vcp|vcp.coefficient.to_i}}.flatten)
 	p.simplex
-	lp.objective.optimized_value = p.obj.get
+	lp.objective.optimized_value = p.obj.get + objective_addition.to_f
 	answer = Hash.new()
 	cols.each do |c|
 		answer[c.name] = c.get_prim.to_s
