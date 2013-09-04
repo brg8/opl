@@ -1,5 +1,7 @@
-Linear Programming syntax modeled after OPL Studio. The syntax is intuitive and easy to use. E.g.
+OPL (pronounced Opal) is a Linear Programming syntax based off of OPL Studio.
 
-forall(i in (3..5), sum(j in (2..4), x[i][j]) <= i)
+The entire purpose of this gem is to allow you to write your linear programs or optimization problems in a simple, human-understandable way. So instead of 30 lines of code to set up a problem (as in the rglpk documentation), you can set up your problem like so:
 
-I try to keep the tests extensive and up to date, so take a look for more examples.
+maximize(\n\n"x + y",\nsubject_to([\n"x <= 10",\n"y <= 3"\n]))
+
+I try to keep the tests up to date, so take a look in there for more examples.
