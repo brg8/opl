@@ -374,11 +374,26 @@ def get_coefficient_variable_pairs(text)
 	text.scan(/\d*[\*]*[a-z]\[*\d*\]*/)
 end
 
+def operator(constraint)
+	if constraint.include?(">=")
+		">="
+	elsif constraint.include?("<=")
+		"<="
+	elsif constraint.include?(">")
+		">"
+	elsif constraint.include?("<")
+		"<"
+	elsif constraint.include?("=")
+		"="
+	end
+end
+
 def put_variables_on_lhs(text)
 	#in: "x + y - x[3] <= 3z + 2x[2] - 10"
 	#out: "x + y - x[3] - 3z - 2x[2] <= -10"
 	text = text.gsub(" ", "")
 	s = sides(text.gsub(" ",""))
+	oper = operator(text)
 	rhs = s[:rhs]
 	lhs = s[:lhs]
 	coefficient_variable_pairs = get_coefficient_variable_pairs(rhs)
@@ -400,12 +415,13 @@ def put_variables_on_lhs(text)
 		end
 	end
 	new_lhs = lhs+add_to_left.join("")
-	text = text.gsub(lhs, new_lhs)
+	text = text.gsub(lhs+oper, new_lhs+oper)
 	new_rhs = rhs
 	remove_from_right.each do |rfr|
 		new_rhs = new_rhs.gsub(rfr, "")
 	end
-	text = text.gsub(rhs, new_rhs)
+	new_rhs = "0" if new_rhs == ""
+	text = text.gsub(oper+rhs, oper+new_rhs)
 	return(text)
 end
 

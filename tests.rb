@@ -193,4 +193,34 @@ describe "lpsolve" do
 		lp.solution["x"].to_f.round(2).should eq 7.5
 		lp.solution["y"].to_f.round(2).should eq 0.94
 	end
+
+	it "solves problem 17" do
+lp = maximize(
+"c",
+subject_to([
+"t = 100",
+"c + g + d + r + n + a + j + o = t",
+"o = 0",
+"c < 50",
+"2c + 2g > t",
+"2c + 2d > t",
+"2g + 2d > t",
+"g - d = 0",
+"r - n = 0",
+"r >= 3",
+"a - j = 0",
+"a >= 0.5"
+]))
+	end
+
+	it "solves problem 18" do
+		lp = maximize(
+			"c",
+		subject_to([
+			"t = 5",
+			"c < t"
+		]))
+		lp.solution["t"].to_f.round(2).should eq 5.0
+		lp.solution["c"].to_f.round(2).should eq 4.0
+	end
 end
