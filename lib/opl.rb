@@ -4,11 +4,10 @@ require "rglpk"
 #1.0
 
 #2.0
+#data arrays
+#boolean variables
 #summing of variables
 	#e.g. x1 + x1 <= 3
-#need to be able to handle arithmetic operations
-	#within a constraint or index
-		#e.g. sum(i in (1..3), x[i-1])
 #a matrix representation of the solution if using
 	#sub notation
 
@@ -248,6 +247,7 @@ class LinearProgram
 	attr_accessor :constraints
 	attr_accessor :rows
 	attr_accessor :solution
+	attr_accessor :formatted_constraints
 
 	def initialize(objective, constraints)
 		@objective = objective
@@ -331,7 +331,14 @@ def put_constants_on_rhs(text)
 	text = text.gsub(" ","")
 	s = sides(text)
 	constants_results = get_constants(s[:lhs])
-	constants = constants_results[:formatted]
+	constants = []
+	constants_results[:formatted].each_index do |i|
+		formatted_constant = constants_results[:formatted][i]
+		unformatted_constant = constants_results[:unformatted][i]
+		unless unformatted_constant.include?("*")
+			constants << formatted_constant
+		end
+	end
 	unless constants.empty?
 		sum = constants.map{|cc|cc.to_f}.inject("+").to_s
 		if sum.include?("-")
@@ -439,6 +446,17 @@ def split_equals_a(constraints)
 	end.flatten
 end
 
+def sum_indices(constraint)
+	pieces_to_sub = constraint.scan(/[a-z]\[\d[\d\+\-]+\]/)
+	pieces_to_sub.each do |piece|
+		characters_to_sum = piece.scan(/[\d\+\-]+/)[0]
+		index_sum = sum_constants(characters_to_sum)
+		new_piece = piece.gsub(characters_to_sum, index_sum)
+		constraint = constraint.gsub(piece, new_piece)
+	end
+	return(constraint)
+end
+
 def subject_to(constraints)
 	constraints = constraints.flatten
 	constraints = split_equals_a(constraints)
@@ -446,7 +464,13 @@ def subject_to(constraints)
 		sub_forall(constraint)
 	end.flatten
 	constraints = constraints.map do |constraint|
+		sum_indices(constraint)
+	end
+	constraints = constraints.map do |constraint|
 		sub_sum(constraint)
+	end
+	constraints = constraints.map do |constraint|
+		sum_indices(constraint)
 	end
 	constraints = constraints.map do |constraint|
 		put_constants_on_rhs(constraint)

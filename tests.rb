@@ -198,13 +198,12 @@ describe "lpsolve" do
 lp = maximize(
 "c",
 subject_to([
-"t = 100",
-"c + g + d + r + n + a + j + o = t",
+"c + g + d + r + n + a + j + o = 100",
 "o = 0",
 "c < 50",
-"2c + 2g > t",
-"2c + 2d > t",
-"2g + 2d > t",
+"2c + 2g > 100",
+"2c + 2d > 100",
+"2g + 2d > 100",
 "g - d = 0",
 "r - n = 0",
 "r >= 3",
@@ -222,5 +221,52 @@ subject_to([
 		]))
 		lp.solution["t"].to_f.round(2).should eq 5.0
 		lp.solution["c"].to_f.round(2).should eq 4.0
+	end
+
+	it "solves problem 19" do
+lp = minimize(
+#"sum(i in (0..6), r[i] + o[i]) + 47250*f[0] + 40500*f[0] + 33750*f[0] + 27000*f[0] + 20250*f[4] + 13500*f[5] + 6750*f[6]",
+"sum(i in (0..6), r[i] + o[i] + j[i] - h[i])",
+subject_to([
+"sum(i in (0..7), f[i]) = 1",
+"forall(i in (1..6), l[i] - l[i-1] >= f[i] + d[i])",
+"forall(i in (1..6), sum(j in (0..j), f[i] + d[i]) >= l[i])",
+"forall(i in (0..6), r[i] = 13500*s[i] + 7000*l[i])",
+"forall(i in (0..5), s[i] >= s[i+1])",
+"forall(i in (0..5), l[i+1] >= l[i])",
+"forall(i in (0..6), s[i] + l[i] = 1)",
+"forall(i in (0..6), o[i] = 2000*l[i])",
+"forall(i in (0..6), d[i] <= l[i])",
+"forall(i in (0..5), d[i] <= d[i+1])",
+"forall(i in (0..6), h[i] = 13500*d[i])",
+"j[0] = 47250*f[0]", "j[1] = 40500*f[1]", "j[2] = 33750*f[2]", "j[3] = 27000*f[3]", "j[4] = 20250*f[4]", "j[5] = 13500*f[5]", "j[6] = 6750*f[6]", "j[7] = 0*f[7]",
+"sum(i in (0..6) d[i]) <= f[7]",
+"forall(i in (0..6) d[i] + f[i] <= 1)"
+]))
+#"forall(i in (0..6), 10*s[i] >= 8.999999 + s[i])",
+#"sum(i in (0..6), l[i]) = 1"
+
+#we have to pay the fee (even if it is $0)
+#if we are out of the apt in a month, then we either pay a fee or rent it out that month
+#for each month, rent costs $13500 if we stay that month, and $7000 if we leave that month
+#if we stay then we can stay the next month
+#if we leave then we cannot return
+#in any given month we are either staying or leaving
+#office space costs us $2000 per month if we've left
+#we can only rent the place out if we have left
+#if we rent the place, then it will be rented until our lease is up
+#the amount of money we rented the place for is $12000
+#j[i] is the amount of money we pay in fees in month i
+#if we rent the place, then we don't pay a fee. If we don't rent the place, then we may or may not pay a fee
+#in any given month, we cannot both rent the place and pay a fee
+	end
+
+it "solves problem 20" do
+lp = minimize(
+"m",
+subject_to([
+"t = 5",
+"c < t"
+]))
 	end
 end
