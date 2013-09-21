@@ -5,17 +5,25 @@ require "rglpk"
 
 #2.0
 #data arrays
-#boolean variables
-#summing of variables
-	#e.g. x1 + x1 <= 3
+#setting variable values in constraints
+	#and then using that variable value in further constraints
 #a matrix representation of the solution if using
 	#sub notation
+#summing of variables
+	#e.g. x1 + x1 <= 3
+#object structure
 
 #3.0
 #will have to figure out "<" and ">"
 #make sure extreme cases of foralls and sums
 	#are handled
 #multiple level sub notation e.g. x[1][[3]]
+
+#4.0
+#absolute value: abs()
+#if --> then statements
+#or statements
+#piecewise statements
 
 #write as module
 
@@ -248,6 +256,8 @@ class LinearProgram
 	attr_accessor :rows
 	attr_accessor :solution
 	attr_accessor :formatted_constraints
+	attr_accessor :rglpk_object
+	attr_accessor :solver
 
 	def initialize(objective, constraints)
 		@objective = objective
@@ -286,10 +296,12 @@ end
 class VariableCoefficientPair
 	attr_accessor :variable
 	attr_accessor :coefficient
+	attr_accessor :variable_type
 
-	def initialize(variable, coefficient)
+	def initialize(variable, coefficient, variable_type=1)
 		@variable = variable
 		@coefficient = coefficient
+		@variable_type = variable_type
 	end
 end
 
@@ -457,7 +469,29 @@ def sum_indices(constraint)
 	return(constraint)
 end
 
-def subject_to(constraints)
+def produce_variable_type_hash(variable_types, all_variables)
+	#in: ["BOOLEAN: x, y", "INTEGER: z"]
+	#out: {:x => 3, :y => 3, :z => 2}
+	variable_type_hash = {}
+	variable_types.each do |vt|
+		type = vt.gsub(" ","").split(":")[0]
+		if type == "BOOLEAN"
+			type_number = 3
+		elsif type == "INTEGER"
+			type_number = 2
+		end
+		variables = vt.split(":")[1].gsub(" ","").split(",")
+		variables.each do |root_var|
+			all_variables_with_root = all_variables.find_all{|var|var.include?("[") && var.split("[")[0]==root_var}+[root_var]
+			all_variables_with_root.each do |var|
+				variable_type_hash[var.to_sym] = type_number
+			end
+		end
+	end
+	variable_type_hash
+end
+
+def subject_to(constraints, variable_types=[])
 	constraints = constraints.flatten
 	constraints = split_equals_a(constraints)
 	constraints = constraints.map do |constraint|
@@ -482,6 +516,7 @@ def subject_to(constraints)
 		sub_rhs_with_summed_constants(constraint)
 	end
 	all_vars = get_all_vars(constraints)
+	variable_type_hash = produce_variable_type_hash(variable_types, all_vars)
 	rows = []
 	constraints.each do |constraint|
 		negate = false
@@ -522,7 +557,8 @@ def subject_to(constraints)
 		pairs = []
 		all_vars.each do |var|
 			coef = coefs[vars.index(var)]
-			pairs << VariableCoefficientPair.new(var, coef)
+			variable_type = variable_type_hash[var.to_sym] || 1
+			pairs << VariableCoefficientPair.new(var, coef, variable_type)
 		end
 		row.variable_coefficient_pairs = pairs
 		rows << row
@@ -563,12 +599,17 @@ def optimize(optimization, objective, rows_c)
 		rows[i].set_bounds(Rglpk::GLP_UP, 0.0, row.upper_bound) unless row.upper_bound.nil?
 		rows[i].set_bounds(Rglpk::GLP_LO, 0.0, row.lower_bound) unless row.lower_bound.nil?
 	end
-	vars = rows_c.first.variable_coefficient_pairs.map{|vcp|vcp.variable}
+	vars = rows_c.first.variable_coefficient_pairs
 	cols = p.add_cols(vars.size)
+	solver = "simplex"
 	vars.each_index do |i|
-		column_name = vars[i]
+		column_name = vars[i].variable
 		cols[i].name = column_name
 		cols[i].set_bounds(Rglpk::GLP_LO, 0.0, 0.0)
+		cols[i].kind = vars[i].variable_type#boolean, integer, etc.
+		if vars[i].variable_type != 1
+			solver = "mip"
+		end
 	end
 	all_vars = rows_c.first.variable_coefficient_pairs.map{|vcp|vcp.variable}
 	obj_coefficients = coefficients(objective.gsub(" ","")).map{|c|c.to_f}
@@ -581,12 +622,21 @@ def optimize(optimization, objective, rows_c)
 	end
 	p.obj.coefs = all_obj_coefficients
 	p.set_matrix(rows_c.map{|row|row.variable_coefficient_pairs.map{|vcp|vcp.coefficient.to_f}}.flatten)
-	p.simplex
-	lp.objective.optimized_value = p.obj.get + objective_addition.to_f
 	answer = Hash.new()
-	cols.each do |c|
-		answer[c.name] = c.get_prim.to_s
+	p.simplex
+	if solver == "simplex"
+		lp.objective.optimized_value = p.obj.get + objective_addition.to_f
+		cols.each do |c|
+			answer[c.name] = c.get_prim.to_s
+		end
+	elsif solver == "mip"
+		p.mip
+		lp.objective.optimized_value = p.obj.mip + objective_addition.to_f
+		cols.each do |c|
+			answer[c.name] = c.mip_val.to_s
+		end
 	end
 	lp.solution = answer
+	lp.rglpk_object = p
 	lp
 end
