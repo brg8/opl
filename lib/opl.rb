@@ -4,22 +4,33 @@ require "rglpk"
 #1.0
 
 #2.0
-#data arrays
-#setting variable values in constraints
-	#and then using that variable value in further constraints
-#a matrix representation of the solution if using
-	#sub notation
-#summing of variables
-	#e.g. x1 + x1 <= 3
-#object structure
+#figure out "<" and ">"
+	#these are handled with a sufficiently
+	#small epsilon
+		#give the user access to the epsilon
+		#and make it an attribute of Row
 
 #3.0
-#will have to figure out "<" and ">"
+#object structure
+
+#4.0
+#setting variable values in constraints
+	#and then using that variable value in further constraints
+		#Look into fixed variables in the glp documentation
+#summing of variables
+	#e.g. x1 + x1 <= 3
+
+#5.0
+#a matrix representation of the solution if using
+	#sub notation
+#data arrays
+
+#6.0
 #make sure extreme cases of foralls and sums
 	#are handled
 #multiple level sub notation e.g. x[1][[3]]
 
-#4.0
+#7.0
 #absolute value: abs()
 #if --> then statements
 #or statements
