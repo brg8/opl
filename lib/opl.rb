@@ -4,33 +4,41 @@ require "rglpk"
 #1.0
 #object structure
 
-#2.1
+#1.1
 #setting variable values in constraints
 	#and then using that variable value in further constraints
 		#Look into fixed variables in the glp documentation
-#2.2
+#1.2
 #summing of variables
 	#e.g. x1 + x1 <= 3
-#2.3
+#1.3
 #allow a POSITIVE: x option or NEGATIVE: x
 
-#3.0
-#a matrix representation of the solution if using
-	#sub notation
+#2.0
 #data arrays
 
-#4.0
-#make sure extreme cases of foralls and sums
-	#are handled
+#2.1
+#a matrix representation of the solution if using
+	#sub notation
+
+#3.0
 #multiple level sub notation e.g. x[1][[3]]
 
-#5.0
-#absolute value: abs()
-#if --> then statements
-#or statements
-#piecewise statements
+#3.1
+#make sure extreme cases of foralls and sums
+	#are handled
 
-#write as module
+#4.0
+#absolute value: abs()
+
+#4.1
+#if --> then statements
+
+#4.2
+#or statements
+
+#4.3
+#piecewise statements
 
 $default_epsilon = 0.01
 
