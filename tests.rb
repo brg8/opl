@@ -179,8 +179,8 @@ describe "lpsolve" do
 			"z > 4"
 		]))
 		lp.solution["x"].to_f.round(2).should eq 5.0
-		lp.solution["y"].to_f.round(2).should eq 2.0
-		lp.solution["z"].to_f.round(2).should eq 5.0
+		lp.solution["y"].to_f.round(2).should eq 2.99
+		lp.solution["z"].to_f.round(2).should eq 4.01
 	end
 
 	it "solves problem 16" do
@@ -195,15 +195,15 @@ describe "lpsolve" do
 	end
 
 	it "solves problem 17" do
-lp = maximize(
-"x",
-subject_to([
-"x >= 0",
-"x <= 100"
-],[
-"BOOLEAN: x"
-]
-))
+		lp = maximize(
+			"x",
+		subject_to([
+			"x >= 0",
+			"x <= 100"
+		],[
+			"BOOLEAN: x"
+		]
+		))
 		lp.solution["x"].to_f.round(2).should eq 1.0
 	end
 
@@ -251,6 +251,22 @@ subject_to([
 		))
 		lp.solution["x"].to_f.round(2).should eq 1.0
 		lp.solution["x[3]"].to_f.round(2).should eq 1.0
+		lp.solution["y"].to_f.round(2).should eq 4.0
+	end
+
+	it "solves problem 21" do
+		lp = maximize(
+			"x + y + z",
+		subject_to([
+			"x + z < 2",
+			"y <= 4",
+		],[
+			"INTEGER: y",
+			"EPSILON: 0.03"
+		]
+		))
+		lp.solution["x"].to_f.round(2).should eq 1.97
+		lp.solution["z"].to_f.round(2).should eq 0.0
 		lp.solution["y"].to_f.round(2).should eq 4.0
 	end
 end

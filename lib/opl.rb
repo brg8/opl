@@ -2,41 +2,37 @@ require "rglpk"
 
 #TODO
 #1.0
-
-#2.0
-#figure out "<" and ">"
-	#these are handled with a sufficiently
-	#small epsilon
-		#give the user access to the epsilon
-		#and make it an attribute of Row
-
-#3.0
 #object structure
 
-#4.0
+#2.1
 #setting variable values in constraints
 	#and then using that variable value in further constraints
 		#Look into fixed variables in the glp documentation
+#2.2
 #summing of variables
 	#e.g. x1 + x1 <= 3
+#2.3
+#allow a POSITIVE: x option or NEGATIVE: x
 
-#5.0
+#3.0
 #a matrix representation of the solution if using
 	#sub notation
 #data arrays
 
-#6.0
+#4.0
 #make sure extreme cases of foralls and sums
 	#are handled
 #multiple level sub notation e.g. x[1][[3]]
 
-#7.0
+#5.0
 #absolute value: abs()
 #if --> then statements
 #or statements
 #piecewise statements
 
 #write as module
+
+$default_epsilon = 0.01
 
 def sides(equation)
 	if equation.include?("<=")
@@ -295,12 +291,14 @@ class Row
 	attr_accessor :lower_bound
 	attr_accessor :upper_bound
 	attr_accessor :variable_coefficient_pairs
+	attr_accessor :epsilon
 
-	def initialize(name, lower_bound, upper_bound)
+	def initialize(name, lower_bound, upper_bound, epsilon)
 		@name = name
 		@lower_bound = lower_bound
 		@upper_bound = upper_bound
 		@variable_coefficient_pairs = []
+		@epsilon = epsilon
 	end
 end
 
@@ -486,9 +484,9 @@ def produce_variable_type_hash(variable_types, all_variables)
 	variable_type_hash = {}
 	variable_types.each do |vt|
 		type = vt.gsub(" ","").split(":")[0]
-		if type == "BOOLEAN"
+		if type.downcase == "boolean"
 			type_number = 3
-		elsif type == "INTEGER"
+		elsif type.downcase == "integer"
 			type_number = 2
 		end
 		variables = vt.split(":")[1].gsub(" ","").split(",")
@@ -502,7 +500,9 @@ def produce_variable_type_hash(variable_types, all_variables)
 	variable_type_hash
 end
 
-def subject_to(constraints, variable_types=[])
+def subject_to(constraints, options=[])
+	variable_types = options.find_all{|option|option.downcase.include?("boolean") || option.downcase.include?("integer")} || []
+	epsilon = options.find_all{|option|option.downcase.include?("epsilon")}.first.gsub(" ","").split(":")[1].to_f rescue $default_epsilon
 	constraints = constraints.flatten
 	constraints = split_equals_a(constraints)
 	constraints = constraints.map do |constraint|
@@ -542,10 +542,10 @@ def subject_to(constraints, variable_types=[])
 			bound = value.split(">=")[1].to_f
 			upper_bound = (bound*-1).to_s
 		elsif value.include?("<")
-			upper_bound = (value.split("<")[1]).to_f - 1
+			upper_bound = (value.split("<")[1]).to_f - epsilon
 		elsif value.include?(">")
 			negate = true
-			bound = (value.split(">")[1]).to_f + 1
+			bound = (value.split(">")[1]).to_f + epsilon
 			upper_bound = (bound*-1).to_s
 		end
 		coefs = coefficients(sides(value)[:lhs])
@@ -560,7 +560,7 @@ def subject_to(constraints, variable_types=[])
 		end
 		vars = variables(sides(value)[:lhs])
 		zero_coef_vars = all_vars - vars
-		row = Row.new(name, lower_bound, upper_bound)
+		row = Row.new(name, lower_bound, upper_bound, epsilon)
 		row.constraint = constraint
 		coefs = coefs + zero_coef_vars.map{|z|0}
 		vars = vars + zero_coef_vars
