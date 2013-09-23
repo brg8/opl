@@ -3,6 +3,7 @@ require "rglpk"
 #TODO
 #1.0
 #object structure
+	#leave 'maximize', 'minimize', and 'subject_to'
 
 #1.1
 #setting variable values in constraints
@@ -11,8 +12,12 @@ require "rglpk"
 #1.2
 #summing of variables
 	#e.g. x1 + x1 <= 3
+
 #1.3
 #allow a POSITIVE: x option or NEGATIVE: x
+
+#1.4
+#float coefficients
 
 #2.0
 #data arrays
@@ -42,51 +47,124 @@ require "rglpk"
 
 $default_epsilon = 0.01
 
-def sides(equation)
-	if equation.include?("<=")
-		char = "<="
-	elsif equation.include?(">=")
-		char = ">="
-	elsif equation.include?("<")
-		char = "<"
-	elsif equation.include?(">")
-		char = ">"
-	elsif equation.include?("=")
-		char = "="
+class String
+	def paren_to_array
+		#in: "(2..5)"
+		#out: "[2,3,4,5]"
+		text = self
+		start = text[1].to_i
+		stop = text[-2].to_i
+		(start..stop).map{|i|i}.to_s
 	end
-	sides = equation.split(char)
-	{:lhs => sides[0], :rhs => sides[1]}
-end
 
-def add_ones(equation)
-	equation = "#"+equation
-	equation.scan(/[#+-][a-z]/).each do |p|
-		if p.include?("+")
-			q = p.gsub("+", "+1*")
-		elsif p.include?("-")
-			q = p.gsub("-","-1*")
-		elsif p.include?("#")
-			q = p.gsub("#","#1*")
+	def sub_paren_with_array
+		text = self
+		targets = text.scan(/\([\d]+\.\.[\d]+\)/)
+		targets.each do |target|
+			text = text.gsub(target, target.paren_to_array)
 		end
-		equation = equation.gsub(p,q)
+		return(text)
 	end
-	equation.gsub("#","")
 end
 
-def paren_to_array(text)
-	#in: "(2..5)"
-	#out: "[2,3,4,5]"
-	start = text[1].to_i
-	stop = text[-2].to_i
-	(start..stop).map{|i|i}.to_s
-end
+class OPL
+	class Equation
+		attr_accessor :text
 
-def sub_paren_with_array(text)
-	targets = text.scan(/\([\d]+\.\.[\d]+\)/)
-	targets.each do |target|
-		text = text.gsub(target, paren_to_array(target))
+		def initialize(text)
+			@text = text
+		end
+
+		def self.sides(text)
+			equation = text
+			if equation.include?("<=")
+				char = "<="
+			elsif equation.include?(">=")
+				char = ">="
+			elsif equation.include?("<")
+				char = "<"
+			elsif equation.include?(">")
+				char = ">"
+			elsif equation.include?("=")
+				char = "="
+			end
+			sides = equation.split(char)
+			{:lhs => sides[0], :rhs => sides[1]}
+		end
+
+		def self.add_ones(text)
+			equation = text
+			equation = "#"+equation
+			equation.scan(/[#+-][a-z]/).each do |p|
+				if p.include?("+")
+					q = p.gsub("+", "+1*")
+				elsif p.include?("-")
+					q = p.gsub("-","-1*")
+				elsif p.include?("#")
+					q = p.gsub("#","#1*")
+				end
+				equation = equation.gsub(p,q)
+			end
+			equation.gsub("#","")
+		end
 	end
-	return(text)
+
+	class LinearProgram
+		attr_accessor :objective
+		attr_accessor :constraints
+		attr_accessor :rows
+		attr_accessor :solution
+		attr_accessor :formatted_constraints
+		attr_accessor :rglpk_object
+		attr_accessor :solver
+
+		def initialize(objective, constraints)
+			@objective = objective
+			@constraints = constraints
+			@rows = []
+		end
+	end
+
+	class Objective
+		attr_accessor :function
+		attr_accessor :optimization#minimize, maximize, equals
+		attr_accessor :variable_coefficient_pairs
+		attr_accessor :optimized_value
+
+		def initialize(function, optimization)
+			@function = function
+			@optimization = optimization
+		end
+	end
+
+	class Row
+		attr_accessor :name
+		attr_accessor :constraint
+		attr_accessor :lower_bound
+		attr_accessor :upper_bound
+		attr_accessor :variable_coefficient_pairs
+		attr_accessor :epsilon
+
+		def initialize(name, lower_bound, upper_bound, epsilon)
+			@name = name
+			@lower_bound = lower_bound
+			@upper_bound = upper_bound
+			@variable_coefficient_pairs = []
+			@epsilon = epsilon
+		end
+	end
+
+	class VariableCoefficientPair
+		attr_accessor :variable
+		attr_accessor :coefficient
+		attr_accessor :variable_type
+
+		def initialize(variable, coefficient, variable_type=1)
+			@variable = variable
+			@coefficient = coefficient
+			@variable_type = variable_type
+		end
+	end
 end
 
 def mass_product(array_of_arrays, base=[])
@@ -104,7 +182,8 @@ def forall(text)
 	#need to be able to handle sums inside here
 	#in: "i in (0..2), x[i] <= 5"
 	#out: ["x[0] <= 5", "x[1] <= 5", "x[2] <= 5"]
-	text = sub_paren_with_array(text)
+	text = text.sub_paren_with_array
+	#text = sub_paren_with_array(text)
 	final_constraints = []
 	indices = text.scan(/[a-z] in/).map{|sc|sc[0]}
 	values = text.scan(/\s\[[\-\s\d+,]+\]/).map{|e|e.gsub(" ", "").scan(/[\-\d]+/)}
@@ -164,7 +243,8 @@ end
 def sum(text, indexvalues={:indices => [], :values => []})
 	#in: "i in [0,1], j in [4,-5], 3x[i][j]"
 	#out: "3x[0][4] + 3x[0][-5] + 3x[1][4] + 3x[1][-5]"
-	text = sub_paren_with_array(text)
+	text = text.sub_paren_with_array
+	#text = sub_paren_with_array(text)
 	final_text = ""
 	element = text.split(",")[-1].gsub(" ","")
 	indices = text.scan(/[a-z] in/).map{|sc|sc[0]}
@@ -251,8 +331,8 @@ def sub_sum(equation, indexvalues={:indices => [], :values => []})
 	return(equation)
 end
 
-def coefficients(equation)#parameter is one side of the equation
-	equation = add_ones(equation)
+def coefficients(text)#parameter is one side of the equation
+	equation = OPL::Equation.add_ones(text)
 	if equation[0]=="-"
 		equation.scan(/[+-][\d\.]+/)
 	else
@@ -260,66 +340,9 @@ def coefficients(equation)#parameter is one side of the equation
 	end
 end
 
-def variables(equation)#parameter is one side of the equation
-	equation = add_ones(equation)
+def variables(text)#parameter is one side of the equation
+	equation = OPL::Equation.add_ones(text)
 	equation.scan(/[a-z]+[\[\]\d]*/)
-end
-
-class LinearProgram
-	attr_accessor :objective
-	attr_accessor :constraints
-	attr_accessor :rows
-	attr_accessor :solution
-	attr_accessor :formatted_constraints
-	attr_accessor :rglpk_object
-	attr_accessor :solver
-
-	def initialize(objective, constraints)
-		@objective = objective
-		@constraints = constraints
-		@rows = []
-	end
-end
-
-class Objective
-	attr_accessor :function
-	attr_accessor :optimization#minimize, maximize, equals
-	attr_accessor :variable_coefficient_pairs
-	attr_accessor :optimized_value
-
-	def initialize(function, optimization)
-		@function = function
-		@optimization = optimization
-	end
-end
-
-class Row
-	attr_accessor :name
-	attr_accessor :constraint
-	attr_accessor :lower_bound
-	attr_accessor :upper_bound
-	attr_accessor :variable_coefficient_pairs
-	attr_accessor :epsilon
-
-	def initialize(name, lower_bound, upper_bound, epsilon)
-		@name = name
-		@lower_bound = lower_bound
-		@upper_bound = upper_bound
-		@variable_coefficient_pairs = []
-		@epsilon = epsilon
-	end
-end
-
-class VariableCoefficientPair
-	attr_accessor :variable
-	attr_accessor :coefficient
-	attr_accessor :variable_type
-
-	def initialize(variable, coefficient, variable_type=1)
-		@variable = variable
-		@coefficient = coefficient
-		@variable_type = variable_type
-	end
 end
 
 def get_all_vars(constraints)
@@ -358,7 +381,7 @@ def put_constants_on_rhs(text)
 	#in: "-8 + x + y + 3 <= 100"
 	#out: "x + y <= 100 + 5"
 	text = text.gsub(" ","")
-	s = sides(text)
+	s = OPL::Equation.sides(text)
 	constants_results = get_constants(s[:lhs])
 	constants = []
 	constants_results[:formatted].each_index do |i|
@@ -402,7 +425,7 @@ def sum_constants(text)
 end
 
 def sub_rhs_with_summed_constants(constraint)
-	rhs = sides(constraint)[:rhs]
+	rhs = OPL::Equation.sides(constraint)[:rhs]
 	constraint.gsub(rhs, sum_constants(rhs))
 end
 
@@ -428,7 +451,7 @@ def put_variables_on_lhs(text)
 	#in: "x + y - x[3] <= 3z + 2x[2] - 10"
 	#out: "x + y - x[3] - 3z - 2x[2] <= -10"
 	text = text.gsub(" ", "")
-	s = sides(text.gsub(" ",""))
+	s = OPL::Equation.sides(text)
 	oper = operator(text)
 	rhs = s[:rhs]
 	lhs = s[:lhs]
@@ -556,7 +579,8 @@ def subject_to(constraints, options=[])
 			bound = (value.split(">")[1]).to_f + epsilon
 			upper_bound = (bound*-1).to_s
 		end
-		coefs = coefficients(sides(value)[:lhs])
+		lhs = OPL::Equation.sides(constraint)[:lhs]
+		coefs = coefficients(lhs)
 		if negate
 			coefs = coefs.map do |coef|
 				if coef.include?("+")
@@ -566,9 +590,9 @@ def subject_to(constraints, options=[])
 				end
 			end
 		end
-		vars = variables(sides(value)[:lhs])
+		vars = variables(lhs)
 		zero_coef_vars = all_vars - vars
-		row = Row.new(name, lower_bound, upper_bound, epsilon)
+		row = OPL::Row.new(name, lower_bound, upper_bound, epsilon)
 		row.constraint = constraint
 		coefs = coefs + zero_coef_vars.map{|z|0}
 		vars = vars + zero_coef_vars
@@ -577,7 +601,7 @@ def subject_to(constraints, options=[])
 		all_vars.each do |var|
 			coef = coefs[vars.index(var)]
 			variable_type = variable_type_hash[var.to_sym] || 1
-			pairs << VariableCoefficientPair.new(var, coef, variable_type)
+			pairs << OPL::VariableCoefficientPair.new(var, coef, variable_type)
 		end
 		row.variable_coefficient_pairs = pairs
 		rows << row
@@ -594,8 +618,8 @@ def minimize(objective, rows_c)#objective function has no = in it
 end
 
 def optimize(optimization, objective, rows_c)
-	o = Objective.new(objective, optimization)
-	lp = LinearProgram.new(o, rows_c.map{|row|row.constraint})
+	o = OPL::Objective.new(objective, optimization)
+	lp = OPL::LinearProgram.new(o, rows_c.map{|row|row.constraint})
 	objective = sub_sum(objective)
 	objective_constants = get_constants(objective)
 	if objective_constants[:formatted].empty?
