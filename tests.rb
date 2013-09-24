@@ -247,13 +247,14 @@ describe "lpsolve" do
 		subject_to([
 			"x <= 2.5",
 			"x[3] <= 2.5",
-			"y <= 4",
+			"x + x[3] <= 2.5",
+			"y <= 4"
 		],[
 			"INTEGER: x, y",
 		]
 		))
 		lp.solution["x"].to_f.round(2).should eq 2.0
-		lp.solution["x[3]"].to_f.round(2).should eq 2.0
+		lp.solution["x[3]"].to_f.round(2).should eq 0.0
 		lp.solution["y"].to_f.round(2).should eq 4.0
 	end
 
