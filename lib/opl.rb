@@ -1,10 +1,20 @@
 require "rglpk"
 
 #TODO
+#unbounded or conflicting bounds messages
+#	e.g.
+#		lp = maximize(
+#			"x",
+#		subject_to([
+#			"x >= 0"
+#		]))
+
+#put a warning about branch and cut in the github description
+
 #1.1
 #setting variable values in constraints
 	#and then using that variable value in further constraints
-		#Look into fixed variables in the glp documentation
+
 #1.2
 #summing of variables
 	#e.g. x1 + x1 <= 3
@@ -89,7 +99,7 @@ class OPL
 			variable = text.scan(/[a-z]\[/)[0].gsub("[","")
 			#will need to make this multiple variables??
 				#or is this even used at all????
-			value_combinations = OPL::Helper.mass_product(values)
+			value_combinations = self.mass_product(values)
 			value_combinations.each_index do |vc_index|
 				value_combination = value_combinations[vc_index]
 				value_combination = [value_combination] unless value_combination.is_a?(Array)
@@ -263,7 +273,7 @@ class OPL
 		end
 
 		def self.coefficients(text)#parameter is one side of the equation
-			equation = OPL::Helper.add_ones(text)
+			equation = self.add_ones(text)
 			if equation[0]=="-"
 				equation.scan(/[+-][\d\.]+/)
 			else
@@ -272,7 +282,7 @@ class OPL
 		end
 
 		def self.variables(text)#parameter is one side of the equation
-			equation = OPL::Helper.add_ones(text)
+			equation = self.add_ones(text)
 			equation.scan(/[a-z]+[\[\]\d]*/)
 		end
 
@@ -312,8 +322,8 @@ class OPL
 			#in: "-8 + x + y + 3 <= 100"
 			#out: "x + y <= 100 + 5"
 			text = text.gsub(" ","")
-			s = OPL::Helper.sides(text)
-			constants_results = OPL::Helper.get_constants(s[:lhs])
+			s = self.sides(text)
+			constants_results = self.get_constants(s[:lhs])
 			constants = []
 			constants_results[:formatted].each_index do |i|
 				formatted_constant = constants_results[:formatted][i]
@@ -356,7 +366,7 @@ class OPL
 		end
 
 		def self.sub_rhs_with_summed_constants(constraint)
-			rhs = OPL::Helper.sides(constraint)[:rhs]
+			rhs = self.sides(constraint)[:rhs]
 			constraint.gsub(rhs, self.sum_constants(rhs))
 		end
 
@@ -382,7 +392,7 @@ class OPL
 			#in: "x + y - x[3] <= 3z + 2x[2] - 10"
 			#out: "x + y - x[3] - 3z - 2x[2] <= -10"
 			text = text.gsub(" ", "")
-			s = OPL::Helper.sides(text)
+			s = self.sides(text)
 			oper = self.operator(text)
 			rhs = s[:rhs]
 			lhs = s[:lhs]
@@ -471,6 +481,9 @@ class OPL
 		attr_accessor :formatted_constraints
 		attr_accessor :rglpk_object
 		attr_accessor :solver
+		attr_accessor :matrix
+		attr_accessor :simplex_message
+		attr_accessor :mip_message
 
 		def initialize(objective, constraints)
 			@objective = objective
@@ -629,8 +642,9 @@ def optimize(optimization, objective, rows_c)
 	rows_c.each_index do |i|
 		row = rows_c[i]
 		rows[i].name = row.name
-		rows[i].set_bounds(Rglpk::GLP_UP, 0.0, row.upper_bound) unless row.upper_bound.nil?
-		rows[i].set_bounds(Rglpk::GLP_LO, 0.0, row.lower_bound) unless row.lower_bound.nil?
+		rows[i].set_bounds(Rglpk::GLP_UP, nil, row.upper_bound) unless row.upper_bound.nil?
+		rows[i].set_bounds(Rglpk::GLP_LO, nil, row.lower_bound) unless row.lower_bound.nil?
+		#rows[i].set_bounds(Rglpk::GLP_FR, row.lower_bound, row.upper_bound)
 	end
 	vars = rows_c.first.variable_coefficient_pairs
 	cols = p.add_cols(vars.size)
@@ -638,12 +652,15 @@ def optimize(optimization, objective, rows_c)
 	vars.each_index do |i|
 		column_name = vars[i].variable
 		cols[i].name = column_name
-		cols[i].set_bounds(Rglpk::GLP_LO, 0.0, 0.0)
 		cols[i].kind = vars[i].variable_type#boolean, integer, etc.
+		if [1,2].include? cols[i].kind
+			cols[i].set_bounds(Rglpk::GLP_FR, nil, nil)
+		end
 		if vars[i].variable_type != 1
 			solver = "mip"
 		end
 	end
+	lp.solver = solver
 	all_vars = rows_c.first.variable_coefficient_pairs.map{|vcp|vcp.variable}
 	obj_coefficients = OPL::Helper.coefficients(objective.gsub(" ","")).map{|c|c.to_f}
 	obj_vars = OPL::Helper.variables(objective.gsub(" ",""))
@@ -654,16 +671,18 @@ def optimize(optimization, objective, rows_c)
 		all_obj_coefficients << coef
 	end
 	p.obj.coefs = all_obj_coefficients
-	p.set_matrix(rows_c.map{|row|row.variable_coefficient_pairs.map{|vcp|vcp.coefficient.to_f}}.flatten)
+	matrix = rows_c.map{|row|row.variable_coefficient_pairs.map{|vcp|vcp.coefficient.to_f}}.flatten
+	lp.matrix = matrix
+	p.set_matrix(matrix)
 	answer = Hash.new()
-	p.simplex
+	lp.simplex_message = p.simplex
 	if solver == "simplex"
 		lp.objective.optimized_value = p.obj.get + objective_addition.to_f
 		cols.each do |c|
 			answer[c.name] = c.get_prim.to_s
 		end
 	elsif solver == "mip"
-		p.mip
+		lp.mip_message = p.mip
 		lp.objective.optimized_value = p.obj.mip + objective_addition.to_f
 		cols.each do |c|
 			answer[c.name] = c.mip_val.to_s

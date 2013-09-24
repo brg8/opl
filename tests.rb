@@ -44,7 +44,8 @@ describe "lpsolve" do
 			"a - x4",
 		subject_to([
 			"a + x4 >= 4",
-			"a + x4 <= 10"
+			"a + x4 <= 10",
+			"a >= 0"
 		]))
 		lp.solution["a"].to_f.round(2).should eq 0.0
 		lp.solution["x4"].to_f.round(2).should eq 10.0
@@ -135,7 +136,8 @@ describe "lpsolve" do
 		lp = minimize(
 			"sum(i in (0..3), j in (2..3), x[i] + 4x[j])",
 		subject_to([
-			"sum(i in (0..1), j in (0..3), 2x[i] - 3x[j]) >= 20"
+			"sum(i in (0..1), j in (0..3), 2x[i] - 3x[j]) >= 20",
+			"forall(i in (0..3), j in (2..3), x[i] >= 0)"
 		]))
 		(lp.solution=={"x[0]"=>"10.0", "x[1]"=>"0.0", "x[2]"=>"0.0", "x[3]"=>"0.0"}).should eq true
 	end
@@ -243,14 +245,15 @@ describe "lpsolve" do
 		lp = maximize(
 			"x + y + x[3]",
 		subject_to([
-			"x + x[3] <= 2.5",
+			"x <= 2.5",
+			"x[3] <= 2.5",
 			"y <= 4",
 		],[
 			"INTEGER: x, y",
 		]
 		))
-		lp.solution["x"].to_f.round(2).should eq 1.0
-		lp.solution["x[3]"].to_f.round(2).should eq 1.0
+		lp.solution["x"].to_f.round(2).should eq 2.0
+		lp.solution["x[3]"].to_f.round(2).should eq 2.0
 		lp.solution["y"].to_f.round(2).should eq 4.0
 	end
 
@@ -268,5 +271,14 @@ describe "lpsolve" do
 		lp.solution["x"].to_f.round(2).should eq 1.97
 		lp.solution["z"].to_f.round(2).should eq 0.0
 		lp.solution["y"].to_f.round(2).should eq 4.0
+	end
+
+	it "solves problem 22" do
+		lp = maximize(
+			"x",
+		subject_to([
+			"x <= -1"
+		]))
+		lp.solution["x"].to_f.round(2).should eq -1.0
 	end
 end
