@@ -9,12 +9,6 @@ require "rglpk"
 #			"x >= 0"
 #		]))
 
-#put a warning about branch and cut in the github description
-
-#1.1
-#setting variable values in constraints
-	#and then using that variable value in further constraints
-
 #1.2
 #summing of variables
 	#e.g. x1 + x1 <= 3
