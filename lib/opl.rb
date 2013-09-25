@@ -9,10 +9,7 @@ require "rglpk"
 #			"x >= 0"
 #		]))
 
-#1.2
-#allow a POSITIVE: x option or NEGATIVE: x
-
-#1.3
+#1.0
 #float coefficients
 
 #2.0
@@ -492,6 +489,26 @@ class OPL
 			end
 			formatted_constraint.gsub(lhs, new_lhs)
 		end
+
+		def self.get_column_bounds(bound_info, all_variables)
+			#in: ["NONNEGATIVE: x1"]
+			#out: {:x1 => {:lower => 0}}
+			column_bounds = {}
+			bound_info.each do |info|
+				type = info.gsub(" ","").split(":")[0]
+				if type.downcase == "nonnegative"
+					bounds = {:lower => 0}
+				end
+				variables = info.split(":")[1].gsub(" ","").split(",")
+				variables.each do |root_var|
+					all_variables_with_root = all_variables.find_all{|var|var.include?("[") && var.split("[")[0]==root_var}+[root_var]
+					all_variables_with_root.each do |var|
+						column_bounds[var.to_sym] = bounds
+					end
+				end
+			end
+			column_bounds
+		end
 	end
 
 	class LinearProgram
@@ -546,6 +563,8 @@ class OPL
 		attr_accessor :variable
 		attr_accessor :coefficient
 		attr_accessor :variable_type
+		attr_accessor :lower_bound
+		attr_accessor :upper_bound
 
 		def initialize(variable, coefficient, variable_type=1)
 			@variable = variable
@@ -558,6 +577,7 @@ end
 def subject_to(constraints, options=[])
 	variable_types = options.find_all{|option|option.downcase.include?("boolean") || option.downcase.include?("integer")} || []
 	epsilon = options.find_all{|option|option.downcase.include?("epsilon")}.first.gsub(" ","").split(":")[1].to_f rescue $default_epsilon
+	bounded_columns = options.find_all{|option|option.downcase.include?("negative") || option.downcase.include?("positive") || option.downcase.include?("nonnegative")}
 	constraints = constraints.flatten
 	constraints = OPL::Helper.split_equals_a(constraints)
 	constraints = constraints.map do |constraint|
@@ -586,6 +606,7 @@ def subject_to(constraints, options=[])
 	end
 	all_vars = OPL::Helper.get_all_vars(constraints)
 	variable_type_hash = OPL::Helper.produce_variable_type_hash(variable_types, all_vars)
+	column_bounds = OPL::Helper.get_column_bounds(bounded_columns, all_vars)
 	rows = []
 	constraints.each do |constraint|
 		negate = false
@@ -628,7 +649,10 @@ def subject_to(constraints, options=[])
 		all_vars.each do |var|
 			coef = coefs[vars.index(var)]
 			variable_type = variable_type_hash[var.to_sym] || 1
-			pairs << OPL::VariableCoefficientPair.new(var, coef, variable_type)
+			vcp = OPL::VariableCoefficientPair.new(var, coef, variable_type)
+			vcp.lower_bound = column_bounds[var.to_sym][:lower] rescue nil
+			vcp.upper_bound = column_bounds[var.to_sym][:upper] rescue nil
+			pairs << vcp
 		end
 		row.variable_coefficient_pairs = pairs
 		rows << row
@@ -666,9 +690,15 @@ def optimize(optimization, objective, rows_c)
 	rows_c.each_index do |i|
 		row = rows_c[i]
 		rows[i].name = row.name
-		rows[i].set_bounds(Rglpk::GLP_UP, nil, row.upper_bound) unless row.upper_bound.nil?
-		rows[i].set_bounds(Rglpk::GLP_LO, nil, row.lower_bound) unless row.lower_bound.nil?
-		#rows[i].set_bounds(Rglpk::GLP_FR, row.lower_bound, row.upper_bound)
+		if row.lower_bound.nil? && row.upper_bound.nil?
+			rows[i].set_bounds(Rglpk::GLP_FR, nil, nil)
+		elsif row.lower_bound.nil?
+			rows[i].set_bounds(Rglpk::GLP_UP, nil, row.upper_bound)
+		elsif row.upper_bound.nil?
+			rows[i].set_bounds(Rglpk::GLP_LO, row.lower_bound, nil)
+		else
+			rows[i].set_bounds(Rglpk::GLP_DB, row.lower_bound, row.upper_bound)
+		end
 	end
 	vars = rows_c.first.variable_coefficient_pairs
 	cols = p.add_cols(vars.size)
@@ -678,7 +708,15 @@ def optimize(optimization, objective, rows_c)
 		cols[i].name = column_name
 		cols[i].kind = vars[i].variable_type#boolean, integer, etc.
 		if [1,2].include? cols[i].kind
-			cols[i].set_bounds(Rglpk::GLP_FR, nil, nil)
+			if vars[i].lower_bound.nil? && vars[i].upper_bound.nil?
+				cols[i].set_bounds(Rglpk::GLP_FR, nil, nil)
+			elsif vars[i].lower_bound.nil?
+				cols[i].set_bounds(Rglpk::GLP_UP, nil, vars[i].upper_bound)
+			elsif vars[i].upper_bound.nil?
+				cols[i].set_bounds(Rglpk::GLP_LO, vars[i].lower_bound, nil)
+			else
+				cols[i].set_bounds(Rglpk::GLP_DB, vars[i].lower_bound, vars[i].upper_bound)
+			end
 		end
 		if vars[i].variable_type != 1
 			solver = "mip"

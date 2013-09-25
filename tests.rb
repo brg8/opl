@@ -309,4 +309,23 @@ describe "lpsolve" do
 		lp.solution["z"].to_f.round(2).should eq 1.0
 		lp.solution["x[3]"].to_f.round(2).should eq 1.0
 	end
+
+	it "solves problem 25" do
+		lp = maximize(
+			"10x1 + 6x2 + 4x3",
+		subject_to([
+			"x1 + x2 + x3 <= 100",
+			"10x1 + 4x2 + 5x3 <= 600",
+			"2x1 + 2x2 + 6x3 <= 300",
+			"x[1] + x[3] <= 400"
+		],[
+			"NONNEGATIVE: x, x1, x2, x3"
+		]
+		))
+		lp.solution["x1"].to_f.round(2).should eq 33.33
+		lp.solution["x2"].to_f.round(2).should eq 66.67
+		lp.solution["x3"].to_f.round(2).should eq 0.0
+		lp.solution["x[1]"].to_f.round(2).should eq 0.0
+		lp.solution["x[3]"].to_f.round(2).should eq 0.0
+	end
 end
