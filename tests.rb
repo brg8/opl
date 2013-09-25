@@ -328,4 +328,19 @@ describe "lpsolve" do
 		lp.solution["x[1]"].to_f.round(2).should eq 0.0
 		lp.solution["x[3]"].to_f.round(2).should eq 0.0
 	end
+
+	it "solves problem 26" do
+		lp = maximize(
+			"10.3x[1] + 4.0005x[2] - x[3]",
+		subject_to([
+			"x[1] + 0.3x[2] - 1.5x[3] <= 100",
+			"forall(i in (1..3), 1.3*x[i] <= 70)"
+		],[
+			"INTEGER: x"
+		]
+		))
+		lp.solution["x[1]"].to_f.round(2).should eq 53.0
+		lp.solution["x[2]"].to_f.round(2).should eq 53.0
+		lp.solution["x[3]"].to_f.round(2).should eq -20.0
+	end
 end

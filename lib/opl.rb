@@ -9,9 +9,6 @@ require "rglpk"
 #			"x >= 0"
 #		]))
 
-#1.0
-#float coefficients
-
 #2.0
 #data arrays
 
@@ -522,6 +519,10 @@ class OPL
 		attr_accessor :matrix
 		attr_accessor :simplex_message
 		attr_accessor :mip_message
+
+		def keys
+			[:objective, :constraints, :rows, :solution, :formatted_constraints, :rglpk_object, :solver, :matrix, :simplex_message, :mip_message]
+		end
 
 		def initialize(objective, constraints)
 			@objective = objective
