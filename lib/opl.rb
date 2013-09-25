@@ -10,13 +10,9 @@ require "rglpk"
 #		]))
 
 #1.2
-#summing of variables
-	#e.g. x1 + x1 <= 3
-
-#1.3
 #allow a POSITIVE: x option or NEGATIVE: x
 
-#1.4
+#1.3
 #float coefficients
 
 #2.0
@@ -465,6 +461,37 @@ class OPL
 			end
 			variable_type_hash
 		end
+
+		def self.sum_variables(formatted_constraint)
+			#in: x + y - z + x[3] + z + y - z + x - y <= 0
+			#out: 2*x + y - z + x[3] <= 0
+			helper = self
+			lhs = helper.sides(formatted_constraint)[:lhs]
+			formatted_lhs = helper.add_ones(lhs)
+			vars = helper.variables(formatted_lhs)
+			coefs = helper.coefficients(formatted_lhs)
+			var_coef_hash = {}
+			vars.each_index do |i|
+				var = vars[i]
+				coef = coefs[i]
+				if var_coef_hash[var]
+					var_coef_hash[var] += coefs[i].to_f
+				else
+					var_coef_hash[var] = coefs[i].to_f
+				end
+			end
+			new_lhs = ""
+			var_coef_hash.keys.each do |key|
+				coef = var_coef_hash[key].to_s
+				var = key
+				coef = "+"+coef unless coef.include?("-")
+				new_lhs += coef+"*"+var
+			end
+			if new_lhs[0] == "+"
+				new_lhs = new_lhs[1..-1]
+			end
+			formatted_constraint.gsub(lhs, new_lhs)
+		end
 	end
 
 	class LinearProgram
@@ -553,6 +580,9 @@ def subject_to(constraints, options=[])
 	end
 	constraints = constraints.map do |constraint|
 		OPL::Helper.sub_rhs_with_summed_constants(constraint)
+	end
+	constraints = constraints.map do |constraint|
+		OPL::Helper.sum_variables(constraint)
 	end
 	all_vars = OPL::Helper.get_all_vars(constraints)
 	variable_type_hash = OPL::Helper.produce_variable_type_hash(variable_types, all_vars)

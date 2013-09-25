@@ -295,4 +295,18 @@ describe "lpsolve" do
 		lp.solution["y"].to_f.round(2).should eq 5.0
 		lp.solution["z"].to_f.round(2).should eq 10.0
 	end
+
+	it "solves problem 24" do
+		lp = maximize(
+			"x + y + z + x[3]",
+		subject_to([
+			"x + y - z + x[3] + z +y <= z - x + y"
+		],[
+			"BOOLEAN: x, y, z"
+		]))
+		lp.solution["x"].to_f.round(2).should eq 0.0
+		lp.solution["y"].to_f.round(2).should eq 0.0
+		lp.solution["z"].to_f.round(2).should eq 1.0
+		lp.solution["x[3]"].to_f.round(2).should eq 1.0
+	end
 end
