@@ -343,4 +343,24 @@ describe "lpsolve" do
 		lp.solution["x[2]"].to_f.round(2).should eq 53.0
 		lp.solution["x[3]"].to_f.round(2).should eq -20.0
 	end
+
+	it "solves problem 27" do
+		lp = maximize(
+			"o[0]x[0] + o[1]x[1] + o[2]x[2]",
+		subject_to([
+			"d[0]*x[0] + d[1]x[1] - d[2]*x[2] <= 100",
+			"forall(i in (0..2), d[i]*x[i] <= 70)",
+			"sum(i in (0..2), d[i]x[i]) <= 400"
+		],[
+			"INTEGER: x",
+			"DATA: {d => [1, 0.3, 1.5], o => [10.3, 4.0005, -1]}"
+		]
+		))
+		lp.solution["x[0]"].to_f.round(2).should eq 70.0
+		lp.solution["x[1]"].to_f.round(2).should eq 233.0
+		lp.solution["x[2]"].to_f.round(2).should eq 27.0
+	end
+
+	#have one here that tests a single data value: d = 3
+	#go ham on testing the interactions of data, sum, and forall
 end
