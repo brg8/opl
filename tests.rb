@@ -22,6 +22,7 @@ describe "lpsolve" do
 		lp.solution["x1"].to_f.round(2).should eq 33.33
 		lp.solution["x2"].to_f.round(2).should eq 66.67
 		lp.solution["x3"].to_f.round(2).should eq 0.0
+		lp.objective.optimized_value.to_f.round(2).should eq 733.33
 	end
 
 	it "solves problem 2" do
@@ -37,6 +38,7 @@ describe "lpsolve" do
 		lp.solution["x"].to_f.round(2).should eq 1.67
 		lp.solution["y"].to_f.round(2).should eq 0.67
 		lp.solution["z"].to_f.round(2).should eq 0.0
+		lp.objective.optimized_value.to_f.round(2).should eq 2.33
 	end
 
 	it "solves problem 3" do
@@ -49,6 +51,7 @@ describe "lpsolve" do
 		]))
 		lp.solution["a"].to_f.round(2).should eq 0.0
 		lp.solution["x4"].to_f.round(2).should eq 10.0
+		lp.objective.optimized_value.to_f.round(2).should eq -10.0
 	end
 
 	it "solves problem 4" do
@@ -61,6 +64,7 @@ describe "lpsolve" do
 		lp.solution["x[1]"].to_f.round(2).should eq 3.0
 		lp.solution["x[3]"].to_f.round(2).should eq 0.0
 		lp.solution["y"].to_f.round(2).should eq 4.0
+		lp.objective.optimized_value.to_f.round(2).should eq 7.0
 	end
 
 	it "solves problem 5" do
@@ -72,6 +76,7 @@ describe "lpsolve" do
 			"x[3] >= 0"
 		]))
 		(lp.solution=={"x[1]"=>"3.0", "x[2]"=>"0.0", "x[0]"=>"0.0", "x[3]"=>"0.0"}).should eq true
+		lp.objective.optimized_value.to_f.round(2).should eq 3.0
 	end
 
 	it "solves problem 6" do
@@ -83,6 +88,7 @@ describe "lpsolve" do
 			"x[3] >= 0"
 		]))
 		(lp.solution=={"x[1]"=>"3.0", "x[2]"=>"0.0", "x[0]"=>"0.0", "x[3]"=>"0.0"}).should eq true
+		lp.objective.optimized_value.to_f.round(2).should eq 3.0
 	end
 
 	it "solves problem 7" do
@@ -97,6 +103,7 @@ describe "lpsolve" do
 			"x[3] >= 0"
 		]))
 		(lp.solution=={"x[1]"=>"3.0", "x[2]"=>"0.0", "z"=>"3.0", "x[0]"=>"0.0", "x[3]"=>"0.0"}).should eq true
+		lp.objective.optimized_value.to_f.round(2).should eq 6.0
 	end
 
 	it "solves problem 8" do
@@ -112,6 +119,7 @@ describe "lpsolve" do
 		lp.solution["x[1][1]"].to_f.round(2).should eq 2.0
 		lp.solution["x[0][0]"].to_f.round(2).should eq 0.0
 		lp.solution["x[0][1]"].to_f.round(2).should eq 0.0
+		lp.objective.optimized_value.to_f.round(2).should eq 3.0
 	end
 
 	it "solves problem 9" do
@@ -121,6 +129,7 @@ describe "lpsolve" do
 			"sum(i in (0..1), j in [0,1], x[i][j]) >= 10"
 		]))
 		(lp.solution=={"x[0][0]"=>"10.0", "x[0][1]"=>"0.0", "x[1][0]"=>"0.0", "x[1][1]"=>"0.0"}).should eq true
+		lp.objective.optimized_value.to_f.round(2).should eq 10.0
 	end
 
 	it "solves problem 10" do
@@ -130,6 +139,7 @@ describe "lpsolve" do
 			"sum(i in (0..1), x[i]) + sum(i in [2,3], 2x[i]) >= 20"
 		]))
 		(lp.solution=={"x[0]"=>"0.0", "x[1]"=>"0.0", "x[2]"=>"10.0", "x[3]"=>"0.0"}).should eq true
+		lp.objective.optimized_value.to_f.round(2).should eq 10.0
 	end
 
 	it "solves problem 11" do
@@ -140,6 +150,7 @@ describe "lpsolve" do
 			"forall(i in (0..3), j in (2..3), x[i] >= 0)"
 		]))
 		(lp.solution=={"x[0]"=>"10.0", "x[1]"=>"0.0", "x[2]"=>"0.0", "x[3]"=>"0.0"}).should eq true
+		lp.objective.optimized_value.to_f.round(2).should eq 20.0
 	end
 
 	it "solves problem 12" do
@@ -151,6 +162,7 @@ describe "lpsolve" do
 		lp.solution["x[0]"].to_f.round(2).should eq 5.0
 		lp.solution["x[1]"].to_f.round(2).should eq 5.0
 		lp.solution["x[2]"].to_f.round(2).should eq 5.0
+		lp.objective.optimized_value.to_f.round(2).should eq 15.0
 	end
 
 	it "solves problem 13" do
@@ -161,6 +173,7 @@ describe "lpsolve" do
 			"forall(i in (0..3), sum(j in (0..i), x[i][j]) >= i)"
 		]))
 		(lp.solution=={"x[0][0]"=>"0.0", "x[0][1]"=>"0.0", "x[0][2]"=>"0.0", "x[0][3]"=>"0.0", "x[1][1]"=>"1.0", "x[1][2]"=>"0.0", "x[1][3]"=>"0.0", "x[2][2]"=>"2.0", "x[2][3]"=>"0.0", "x[3][3]"=>"3.0", "x[1][0]"=>"0.0", "x[2][0]"=>"0.0", "x[2][1]"=>"0.0", "x[3][0]"=>"0.0", "x[3][1]"=>"0.0", "x[3][2]"=>"0.0"}).should eq true
+		lp.objective.optimized_value.to_f.round(2).should eq 6.0
 	end
 
 	it "solves problem 14" do
@@ -170,6 +183,7 @@ describe "lpsolve" do
 			"x + 9 <= 10"
 		]))
 		lp.solution["x"].to_f.round(2).should eq 1.0
+		lp.objective.optimized_value.to_f.round(2).should eq 4.0
 	end
 
 	it "solves problem 15" do
@@ -183,6 +197,7 @@ describe "lpsolve" do
 		lp.solution["x"].to_f.round(2).should eq 5.0
 		lp.solution["y"].to_f.round(2).should eq 2.99
 		lp.solution["z"].to_f.round(2).should eq 4.01
+		lp.objective.optimized_value.to_f.round(2).should eq 3.98
 	end
 
 	it "solves problem 16" do
@@ -194,6 +209,7 @@ describe "lpsolve" do
 		]))
 		lp.solution["x"].to_f.round(2).should eq 7.5
 		lp.solution["y"].to_f.round(2).should eq 0.94
+		lp.objective.optimized_value.to_f.round(2).should eq 8.44
 	end
 
 	it "solves problem 17" do
@@ -207,6 +223,7 @@ describe "lpsolve" do
 		]
 		))
 		lp.solution["x"].to_f.round(2).should eq 1.0
+		lp.objective.optimized_value.to_f.round(2).should eq 1.0
 	end
 
 	it "solves problem 18" do
@@ -219,6 +236,7 @@ describe "lpsolve" do
 		]
 		))
 		lp.solution["x"].to_f.round(2).should eq 9.0
+		lp.objective.optimized_value.to_f.round(2).should eq 9.0
 	end
 
 	it "solves problem 19" do
@@ -239,6 +257,7 @@ describe "lpsolve" do
 		lp.solution["x1"].to_f.round(2).should eq 1.0
 		lp.solution["x2"].to_f.round(2).should eq 99.0
 		lp.solution["x3"].to_f.round(2).should eq 0.0
+		lp.objective.optimized_value.to_f.round(2).should eq 604.0
 	end
 
 	it "solves problem 20" do
@@ -256,6 +275,7 @@ describe "lpsolve" do
 		lp.solution["x"].to_f.round(2).should eq 2.0
 		lp.solution["x[3]"].to_f.round(2).should eq 0.0
 		lp.solution["y"].to_f.round(2).should eq 4.0
+		lp.objective.optimized_value.to_f.round(2).should eq 6.0
 	end
 
 	it "solves problem 21" do
@@ -272,6 +292,7 @@ describe "lpsolve" do
 		lp.solution["x"].to_f.round(2).should eq 1.97
 		lp.solution["z"].to_f.round(2).should eq 0.0
 		lp.solution["y"].to_f.round(2).should eq 4.0
+		lp.objective.optimized_value.to_f.round(2).should eq 5.97
 	end
 
 	it "solves problem 22" do
@@ -281,6 +302,7 @@ describe "lpsolve" do
 			"x <= -1"
 		]))
 		lp.solution["x"].to_f.round(2).should eq -1.0
+		lp.objective.optimized_value.to_f.round(2).should eq -1.0
 	end
 
 	it "solves problem 23" do
@@ -294,6 +316,7 @@ describe "lpsolve" do
 		lp.solution["x"].to_f.round(2).should eq 5.0
 		lp.solution["y"].to_f.round(2).should eq 5.0
 		lp.solution["z"].to_f.round(2).should eq 10.0
+		lp.objective.optimized_value.to_f.round(2).should eq 20.0
 	end
 
 	it "solves problem 24" do
@@ -308,6 +331,7 @@ describe "lpsolve" do
 		lp.solution["y"].to_f.round(2).should eq 0.0
 		lp.solution["z"].to_f.round(2).should eq 1.0
 		lp.solution["x[3]"].to_f.round(2).should eq 1.0
+		lp.objective.optimized_value.to_f.round(2).should eq 2.0
 	end
 
 	it "solves problem 25" do
@@ -327,6 +351,7 @@ describe "lpsolve" do
 		lp.solution["x3"].to_f.round(2).should eq 0.0
 		lp.solution["x[1]"].to_f.round(2).should eq 0.0
 		lp.solution["x[3]"].to_f.round(2).should eq 0.0
+		lp.objective.optimized_value.to_f.round(2).should eq 733.33
 	end
 
 	it "solves problem 26" do
@@ -342,6 +367,7 @@ describe "lpsolve" do
 		lp.solution["x[1]"].to_f.round(2).should eq 53.0
 		lp.solution["x[2]"].to_f.round(2).should eq 53.0
 		lp.solution["x[3]"].to_f.round(2).should eq -20.0
+		lp.objective.optimized_value.to_f.round(2).should eq 777.93
 	end
 
 	it "solves problem 27" do
@@ -359,8 +385,70 @@ describe "lpsolve" do
 		lp.solution["x[0]"].to_f.round(2).should eq 70.0
 		lp.solution["x[1]"].to_f.round(2).should eq 233.0
 		lp.solution["x[2]"].to_f.round(2).should eq 27.0
+		lp.objective.optimized_value.to_f.round(2).should eq 1626.12
 	end
 
-	#have one here that tests a single data value: d = 3
+	it "solves problem 28" do
+		lp = maximize(
+			"d*x",
+		subject_to([
+			"x <= d"
+		],[
+			"DATA: {d => 3}"
+		]
+		))
+		lp.solution["x"].to_f.round(2).should eq 3.0
+		lp.objective.optimized_value.to_f.round(2).should eq 9.0
+	end
+
+	it "solves problem 29" do
+		lp = maximize(
+			"o[0]x[0] + o[1]x[1] + o[2]x[2]",
+		subject_to([
+			"d[0]*x[0] + d[1]x[1] - d[2]*x[2] <= 100",
+			"forall(i in (0..2), d[i]*x[i] <= 70)",
+			"sum(i in (0..2), d[i]x[i]) <= 400",
+			"forall(i in (0..2), sum(j in (0..i), d[i]x[i]) <= 1000)"
+		],[
+			"INTEGER: x",
+			"DATA: {d => [1, 0.3, 1.5], o => [10.3, 4.0005, -1]}"
+		]
+		))
+		lp.solution["x[0]"].to_f.round(2).should eq 70.0
+		lp.solution["x[1]"].to_f.round(2).should eq 233.0
+		lp.solution["x[2]"].to_f.round(2).should eq 27.0
+		lp.objective.optimized_value.to_f.round(2).should eq 1626.12
+	end
+
+	it "solves problem 30" do
+		lp = minimize(
+			"d + a[0]x[0] + a[1]x[1]",
+		subject_to([
+			"a[0]x[0] - x[1] + 14 <= d",
+		],[
+			"NONNEGATIVE: a, x",
+			"DATA: {a => [3.3, 4.7], d => 4}"
+		]
+		))
+		lp.solution["x[0]"].to_f.round(2).should eq 0.0
+		lp.solution["x[1]"].to_f.round(2).should eq 10.0
+		lp.objective.optimized_value.to_f.round(2).should eq 51.0
+	end
+
+	it "solves problem 31" do
+		lp = minimize(
+			"d + sum(i in (0..1), a[i]x[i] + dx[i] - d)",
+		subject_to([
+			"a[0]x[0] - x[1] + 14 <= d",
+		],[
+			"NONNEGATIVE: a, x",
+			"DATA: {a => [3.3, 4.7], d => 4}"
+		]
+		))
+		lp.solution["x[0]"].to_f.round(2).should eq 0.0
+		lp.solution["x[1]"].to_f.round(2).should eq 10.0
+		lp.objective.optimized_value.to_f.round(2).should eq 83.0
+	end
+
 	#go ham on testing the interactions of data, sum, and forall
 end

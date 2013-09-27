@@ -8,6 +8,8 @@ require "rglpk"
 #		subject_to([
 #			"x >= 0"
 #		]))
+#
+#should return an error message
 
 #2.1
 #ability to do arithmetic with data indices
@@ -19,6 +21,9 @@ require "rglpk"
 
 #2.3
 #parse data from a file
+
+#2.4
+#way more comprehensive test suite of functionality so far
 
 #3.0
 #multiple level sub notation e.g. x[1][[3]]
@@ -316,22 +321,25 @@ class OPL
 		def self.get_constants(text)
 			#in: "-8 + x + y + 3"
 			#out: "[-8, +3]"
-			text = text.gsub(" ","")
-			text = text+"#"
-			cs = []
-			potential_constants = text.scan(/[\d\.]+[^a-z^\[^\]^\d^\.^\)]/)
-			#potential_constants = text.scan(/\d+[^a-z^\[^\]^\d]/)
-			constants = potential_constants.find_all{|c|![*('a'..'z'),*('A'..'Z')].include?(text[text.index(c)-1])}
-			constants.each do |constant|
-				c = constant.scan(/[\d\.]+/)[0]
-				index = text.index(constant)
-				if index == 0
-					c = "+"+c
-				else
-					c = text.scan(/[\-\+]#{constant}/)[0]
-				end
-				cs << c.scan(/[\-\+][\d\.]+/)[0]
-			end
+text = text.gsub(" ","")
+text = text+"#"
+cs = []
+potential_constants = text.scan(/[\d\.]+[^a-z^\[^\]^\d^\.^\)^\*]/)
+constants = potential_constants.find_all{|c|![*('a'..'z'),*('A'..'Z')].include?(text[text.index(c)-1])}
+searchable_text = text
+constants.each do |constant|
+c = constant.scan(/[\d\.]+/)[0]
+index = searchable_text.index(constant)
+if index == 0
+c = "+"+c
+else
+constant = constant.gsub('+','[+]')
+constant = constant.gsub('-','[-]')
+c = searchable_text.scan(/[\-\+]#{constant}/)[0]
+end
+cs << c.scan(/[\-\+][\d\.]+/)[0]
+searchable_text[index] = "**"
+end
 			return({:formatted => cs, :unformatted => constants})
 		end
 
@@ -496,7 +504,6 @@ class OPL
 			lhs = helper.sides(formatted_constraint)[:lhs]
 			formatted_lhs = helper.add_ones(lhs, lp)
 			vars = helper.variables(formatted_lhs, lp)
-			#data coefficients should already be substituted
 			coefs = helper.coefficients(formatted_lhs, lp)
 			var_coef_hash = {}
 			vars.each_index do |i|
@@ -580,14 +587,19 @@ class OPL
 				things_to_substitute[dname] = targets
 				targets.each do |target|
 					indices = target.scan(/\d+/).map{|ind|ind.to_i}
-					value = dvalue.values_at_a(indices)
+					indices = "" if indices.empty?
+					if dvalue.is_a?(Array)
+						value = dvalue.values_at_a(indices)
+					else
+						value = dvalue
+					end
 					data_values[dname+indices.to_s] = value
 				end
 			end
 			data_values.keys.each do |key|
 				name = key
 				value = data_values[key]
-				text = text.gsub(name, value)
+				text = text.gsub(name, value.to_s)
 			end
 			plus_minus = text.scan(/\+[\ ]+-/)
 			plus_minus.each do |pm|
@@ -595,14 +607,49 @@ class OPL
 			end
 			return(text)
 		end
+
+		def self.remove_constants(text)
+			helper = self
+			text = text.gsub(" ","")
+			text = "+"+text if text[0]!="-"
+			text = text+"#"
+			constants = helper.get_constants(text)
+			replacements = []
+			constants[:formatted].each_index do |i|
+				formatted = constants[:formatted][i]
+				unformatted = constants[:unformatted][i]
+				if formatted.include?("+")
+					if unformatted.include?("+")
+						replacements << ["+"+unformatted, "+"]
+					elsif unformatted.include?("-")
+						replacements << ["-"+unformatted, "-"]
+					elsif unformatted.include?("#")
+						replacements << [formatted+"#",""]
+					end
+				elsif formatted.include?("-")
+					if unformatted.include?("+")
+						replacements << ["-"+unformatted, "+"]
+					elsif unformatted.include?("-")
+						replacements << ["-"+unformatted, "-"]
+					elsif unformatted.include?("#")
+						replacements << [formatted+"#",""]
+					end
+				end
+			end
+			replacements.each do |replacement|
+				text = text.gsub(replacement[0],replacement[1])
+			end
+			text = text[1..-1] if text[0] == "+"
+			return(text)
+		end
 	end
 
 	class LinearProgram
 		attr_accessor :objective
 		attr_accessor :constraints
+		attr_accessor :original_constraints
 		attr_accessor :rows
 		attr_accessor :solution
-		attr_accessor :formatted_constraints
 		attr_accessor :rglpk_object
 		attr_accessor :solver
 		attr_accessor :matrix
@@ -627,9 +674,11 @@ class OPL
 
 	class Objective
 		attr_accessor :function
+		attr_accessor :expanded_function
 		attr_accessor :optimization#minimize, maximize, equals
 		attr_accessor :variable_coefficient_pairs
 		attr_accessor :optimized_value
+		attr_accessor :addition
 
 		def initialize(function, optimization)
 			@function = function
@@ -688,22 +737,23 @@ class OPL
 end
 
 def subject_to(constraints, options=[])
-lp = OPL::LinearProgram.new
-variable_types = options.find_all{|option|option.downcase.include?("boolean") || option.downcase.include?("integer")} || []
-epsilon = options.find_all{|option|option.downcase.include?("epsilon")}.first.gsub(" ","").split(":")[1].to_f rescue $default_epsilon
-bounded_columns = options.find_all{|option|option.downcase.include?("negative") || option.downcase.include?("positive") || option.downcase.include?("nonnegative")}
-data  = options.find_all{|option|option.gsub(" ","").downcase.include?("data:")}[0]
-if data
-parsed_data = OPL::Helper.parse_data(data)
-parsed_data.keys.each do |data_key|
-data_value = parsed_data[data_key]
-lp.data << OPL::Data.new(data_key, data_value)
-end
-end
-lp.epsilon = epsilon
-constraints = constraints.flatten
-constraints = OPL::Helper.split_equals_a(constraints)
-data_names = lp.data.map{|d|d.name}
+	lp = OPL::LinearProgram.new
+	lp.original_constraints = constraints
+	variable_types = options.find_all{|option|option.downcase.include?("boolean") || option.downcase.include?("integer")} || []
+	epsilon = options.find_all{|option|option.downcase.include?("epsilon")}.first.gsub(" ","").split(":")[1].to_f rescue $default_epsilon
+	bounded_columns = options.find_all{|option|option.downcase.include?("negative") || option.downcase.include?("positive") || option.downcase.include?("nonnegative")}
+	data  = options.find_all{|option|option.gsub(" ","").downcase.include?("data:")}[0]
+	if data
+		parsed_data = OPL::Helper.parse_data(data)
+		parsed_data.keys.each do |data_key|
+			data_value = parsed_data[data_key]
+			lp.data << OPL::Data.new(data_key, data_value)
+		end
+	end
+	lp.epsilon = epsilon
+	constraints = constraints.flatten
+	constraints = OPL::Helper.split_equals_a(constraints)
+	data_names = lp.data.map{|d|d.name}
 constraints = constraints.map do |constraint|
 OPL::Helper.sub_forall(constraint)
 end.flatten
@@ -729,8 +779,18 @@ constraints = constraints.map do |constraint|
 OPL::Helper.substitute_data(constraint, lp)
 end
 constraints = constraints.map do |constraint|
+OPL::Helper.put_constants_on_rhs(constraint)
+end
+constraints = constraints.map do |constraint|
+OPL::Helper.put_variables_on_lhs(constraint)
+end
+constraints = constraints.map do |constraint|
+OPL::Helper.sub_rhs_with_summed_constants(constraint)
+end
+constraints = constraints.map do |constraint|
 OPL::Helper.sum_variables(constraint, lp)
 end
+	lp.constraints = constraints
 	all_vars = OPL::Helper.get_all_vars(constraints, lp)
 	variable_type_hash = OPL::Helper.produce_variable_type_hash(variable_types, all_vars)
 	column_bounds = OPL::Helper.get_column_bounds(bounded_columns, all_vars)
@@ -799,16 +859,21 @@ def minimize(objective, lp)
 end
 
 def optimize(optimization, objective, lp)
-	objective = OPL::Helper.substitute_data(objective, lp)
-	o = OPL::Objective.new(objective, optimization)
-	lp.objective = o
+	original_objective = objective
 	objective = OPL::Helper.sub_sum(objective)
+	objective = OPL::Helper.substitute_data(objective, lp)
 	objective_constants = OPL::Helper.get_constants(objective)
 	if objective_constants[:formatted].empty?
 		objective_addition = 0
 	else
 		objective_addition = OPL::Helper.sum_constants(objective_constants[:formatted].inject("+"))
 	end
+	objective = OPL::Helper.remove_constants(objective)
+	objective = OPL::Helper.sum_variables(objective, lp)
+	o = OPL::Objective.new(original_objective, optimization)
+	o.expanded_function = objective
+	lp.objective = o
+	lp.objective.addition = objective_addition
 	rows_c = lp.rows
 	p = Rglpk::Problem.new
 	p.name = "sample"
@@ -855,7 +920,6 @@ def optimize(optimization, objective, lp)
 	end
 	lp.solver = solver
 	all_vars = rows_c.first.variable_coefficient_pairs.map{|vcp|vcp.variable}
-	#not sure here
 	obj_coefficients = OPL::Helper.coefficients(objective.gsub(" ",""), lp).map{|c|c.to_f}
 	obj_vars = OPL::Helper.variables(objective.gsub(" ",""), lp)
 	all_obj_coefficients = []
