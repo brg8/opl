@@ -11,10 +11,6 @@ require "rglpk"
 #
 #should return an error message
 
-#2.1
-#ability to do arithmetic with data indices
-	#forall(i in (2..3) d[i-1]x[i] <= 10)
-
 #2.2
 #a matrix representation of the solution if using
 	#sub notation
@@ -44,6 +40,10 @@ require "rglpk"
 #4.3
 #piecewise statements
 
+#4.4
+#duals, sensitivity, etc. - I could simply allow
+	#access to the rglpk object wrapper
+
 $default_epsilon = 0.01
 
 class String
@@ -65,25 +65,11 @@ class String
 		return(text)
 	end
 
-	def to_array_base
-		#in: "[1,2,3]"
-		#out: ["1","2","3"]
-		string_values = self.gsub("[","").gsub("]","").split(",")
-		values = []
-		string_values.each do |string_value|
-			if string_value.include?("[")
-				values << string_value.gsub("[","").gsub("]","").split(",")
-			else
-				values << string_value.to_f
-			end
-		end
-		return(values)
-	end
-
 	def to_array(current_array=[self])
 		#in: "[1,2,[3,4],[4,2,[3,2,[4,2]]],2,[4,2]]"
 		#out: [1,2,[3,4],[4,2,[3,2,[4,2]]],2,[4,2]]
 		def current_level_information(b)
+			b = b.gsub(" ","")
 			stripped_array = b[1..-2]
 			in_array = 0
 			inside_arrays_string = ""
@@ -105,7 +91,6 @@ class String
 			inside_values_string = stripped_array_without_arrays.split(",").find_all{|e|e!=""}.join(",")
 			return {:values => inside_values_string, :arrays => inside_arrays_string}
 		end
-
 		if !current_array.join(",").include?("[")
 			return(current_array)
 		else
