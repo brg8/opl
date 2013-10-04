@@ -64,6 +64,69 @@ class String
 		end
 		return(text)
 	end
+
+	def to_array_base
+		#in: "[1,2,3]"
+		#out: ["1","2","3"]
+		string_values = self.gsub("[","").gsub("]","").split(",")
+		values = []
+		string_values.each do |string_value|
+			if string_value.include?("[")
+				values << string_value.gsub("[","").gsub("]","").split(",")
+			else
+				values << string_value.to_f
+			end
+		end
+		return(values)
+	end
+
+	def to_array(current_array=[self])
+		#in: "[1,2,[3,4],[4,2,[3,2,[4,2]]],2,[4,2]]"
+		#out: [1,2,[3,4],[4,2,[3,2,[4,2]]],2,[4,2]]
+		def current_level_information(b)
+			stripped_array = b[1..-2]
+			in_array = 0
+			inside_arrays_string = ""
+			inside_values_string = ""
+			stripped_array.split("").each do |char|
+				if char == "["
+					in_array += 1
+				elsif char == "]"
+					in_array += -1
+				end
+				if (in_array > 0) || (char == "]")
+					inside_arrays_string += char
+				end
+			end
+			stripped_array_without_arrays = stripped_array
+			inside_arrays_string.gsub("][","],,,[").split(",,,").each do |str|
+				stripped_array_without_arrays = stripped_array_without_arrays.gsub(str,"")
+			end
+			inside_values_string = stripped_array_without_arrays.split(",").find_all{|e|e!=""}.join(",")
+			return {:values => inside_values_string, :arrays => inside_arrays_string}
+		end
+
+		if !current_array.join(",").include?("[")
+			return(current_array)
+		else
+			a = []
+			element = current_array.find_all{|e|e.include?("[")}.first
+			i = current_array.index(element)
+			info = current_level_information(element)
+			info[:values].split(",").each do |v|
+				a << v
+			end
+			info[:arrays].gsub("][","],,,[").split(",,,").each do |v|
+				a << v.to_array
+			end
+			current_array[i] = a
+			return(current_array[0])
+		end
+	end
+
+	def to_a
+		self.to_array
+	end
 end
 
 class Array
@@ -325,9 +388,10 @@ text = text.gsub(" ","")
 text = text+"#"
 cs = []
 potential_constants = text.scan(/[\d\.]+[^a-z^\[^\]^\d^\.^\)^\*]/)
-constants = potential_constants.find_all{|c|![*('a'..'z'),*('A'..'Z')].include?(text[text.index(c)-1])}
+constants = potential_constants.find_all{|c|![*('a'..'z'),*('A'..'Z'),"["].include?(text[text.index(c)-1])}
 searchable_text = text
-constants.each do |constant|
+constants.each_index do |i|
+constant = constants[i]
 c = constant.scan(/[\d\.]+/)[0]
 index = searchable_text.index(constant)
 if index == 0
@@ -465,7 +529,8 @@ end
 		end
 
 		def self.sum_indices(constraint)
-			pieces_to_sub = constraint.scan(/[a-z]\[\d[\d\+\-]+\]/)
+			#pieces_to_sub = constraint.scan(/[a-z]\[\d[\d\+\-]+\]/)
+			pieces_to_sub = constraint.scan(/[a-z\]]\[\d[\d\+\-]+\]/)
 			pieces_to_sub.each do |piece|
 				characters_to_sum = piece.scan(/[\d\+\-]+/)[0]
 				index_sum = self.sum_constants(characters_to_sum)
@@ -555,18 +620,12 @@ end
 			data_string = data_hash_string.gsub("{",",").gsub("}",",")
 			names = data_string.scan(/,[a-z]/).map{|comma_name|comma_name.gsub(",","")}
 			string_values = data_string.scan(/\=\>[\[\d\.\]\,\-]+,/).map{|scanned_value|scanned_value[2..-2]}
-			values = []
-			string_values.each do |string_value|
-				if string_value.include?("[")
-					values << string_value.gsub("[","").gsub("]","").split(",")
-				else
-					values << string_value.to_f
-				end
-			end
+			values = string_values.map{|sv|sv.to_a}
 			data_hash = {}
 			names.each_index do |i|
 				name = names[i]
 				value = values[i]
+				value = value[0] if value.size == 1
 				data_hash[name] = value
 			end
 			return(data_hash)
@@ -593,7 +652,7 @@ end
 					else
 						value = dvalue
 					end
-					data_values[dname+indices.to_s] = value
+					data_values[dname+indices.to_s.gsub(",","][").gsub(" ","")] = value
 				end
 			end
 			data_values.keys.each do |key|
@@ -861,6 +920,7 @@ end
 def optimize(optimization, objective, lp)
 	original_objective = objective
 	objective = OPL::Helper.sub_sum(objective)
+	objective = OPL::Helper.sum_indices(objective)
 	objective = OPL::Helper.substitute_data(objective, lp)
 	objective_constants = OPL::Helper.get_constants(objective)
 	if objective_constants[:formatted].empty?

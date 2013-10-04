@@ -450,5 +450,23 @@ describe "lpsolve" do
 		lp.objective.optimized_value.to_f.round(2).should eq 83.0
 	end
 
+	it "solves problem 32" do
+		lp = maximize(
+			"sum(i in [1,2], j in (0..1), d[i][j+1]*x[i-1][j])",
+		subject_to([
+			"forall(i in (1..2), x[i-1][1] <= 100)",
+			"forall(i in (0..2), j in (0..2), x[i][j] <= 200)"
+		],[
+			"NONNEGATIVE: x",
+			"DATA: {d => [[3,5,3],[1,2,3],[2,5,9]]}"
+		]
+		))
+		(lp.solution=={"x[0][1]"=>"100.0", "x[1][1]"=>"100.0", "x[0][0]"=>"200.0", "x[0][2]"=>"0.0", "x[1][0]"=>"200.0", "x[1][2]"=>"0.0", "x[2][0]"=>"0.0", "x[2][1]"=>"0.0", "x[2][2]"=>"0.0"}).should eq true
+		lp.objective.optimized_value.to_f.round(2).should eq 2600.0
+	end
+
+	#multiple level data arrays with negatives and floats
+	#arithmetic in indices in data arrays
+	#arithmetic in indices in multiple level arrays
 	#go ham on testing the interactions of data, sum, and forall
 end
