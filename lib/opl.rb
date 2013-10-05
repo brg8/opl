@@ -11,10 +11,6 @@ require "rglpk"
 #
 #should return an error message
 
-#2.2
-#a matrix representation of the solution if using
-	#sub notation
-
 #2.3
 #parse data from a file
 
@@ -136,6 +132,41 @@ class Array
 		else
 			values_at_a(indices[1..-1], current_array[indices[0]])
 		end
+	end
+
+	def inject_dim(int)
+		arr = self
+		int.times do
+			arr << []
+		end
+		arr
+	end
+
+	def matrix(int_arr, current_arr=[])		
+		int = int_arr[0]
+		new_int_arr = int_arr[1..-1]
+		if int_arr.empty?
+			return(current_arr)
+		else
+			if current_arr.empty?
+				new_arr = current_arr.inject_dim(int)
+				self.matrix(new_int_arr, new_arr)
+			else
+				current_arr.each do |arr|
+					arr.matrix(int_arr, arr)
+				end
+			end
+		end
+	end
+
+	def insert_at(position_arr, value)
+		arr = self
+		if position_arr.size == 1
+			arr[position_arr[0]] = value
+			return(arr)
+		else
+			arr[position_arr[0]].insert_at(position_arr[1..-1], value)
+		end				
 	end
 end
 
@@ -369,26 +400,26 @@ class OPL
 		def self.get_constants(text)
 			#in: "-8 + x + y + 3"
 			#out: "[-8, +3]"
-text = text.gsub(" ","")
-text = text+"#"
-cs = []
-potential_constants = text.scan(/[\d\.]+[^a-z^\[^\]^\d^\.^\)^\*]/)
-constants = potential_constants.find_all{|c|![*('a'..'z'),*('A'..'Z'),"["].include?(text[text.index(c)-1])}
-searchable_text = text
-constants.each_index do |i|
-constant = constants[i]
-c = constant.scan(/[\d\.]+/)[0]
-index = searchable_text.index(constant)
-if index == 0
-c = "+"+c
-else
-constant = constant.gsub('+','[+]')
-constant = constant.gsub('-','[-]')
-c = searchable_text.scan(/[\-\+]#{constant}/)[0]
-end
-cs << c.scan(/[\-\+][\d\.]+/)[0]
-searchable_text[index] = "**"
-end
+			text = text.gsub(" ","")
+			text = text+"#"
+			cs = []
+			potential_constants = text.scan(/[\d\.]+[^a-z^\[^\]^\d^\.^\)^\*]/)
+			constants = potential_constants.find_all{|c|![*('a'..'z'),*('A'..'Z'),"["].include?(text[text.index(c)-1])}
+			searchable_text = text
+			constants.each_index do |i|
+				constant = constants[i]
+				c = constant.scan(/[\d\.]+/)[0]
+				index = searchable_text.index(constant)
+				if index == 0
+					c = "+"+c
+				else
+					constant = constant.gsub('+','[+]')
+					constant = constant.gsub('-','[-]')
+					c = searchable_text.scan(/[\-\+]#{constant}/)[0]
+				end
+				cs << c.scan(/[\-\+][\d\.]+/)[0]
+				searchable_text[index] = "**"
+			end
 			return({:formatted => cs, :unformatted => constants})
 		end
 
@@ -704,6 +735,7 @@ end
 		attr_accessor :variable_types
 		attr_accessor :column_bounds
 		attr_accessor :epsilon
+		attr_accessor :matrix_solution
 
 		def keys
 			[:objective, :constraints, :rows, :solution, :formatted_constraints, :rglpk_object, :solver, :matrix, :simplex_message, :mip_message, :data]
@@ -713,6 +745,37 @@ end
 			@rows = []
 			@data = []
 			@epsilon = $default_epsilon
+			@matrix_solution = {}
+		end
+
+		def solution_as_matrix
+			lp = self
+			variables = lp.solution.keys.map do |key|
+				key.scan(/[a-z]/)[0] if key.include?("[")
+			end.uniq.find_all{|e|!e.nil?}
+			matrix_solution = {}
+			variables.each do |var|
+				elements = lp.solution.keys.find_all{|key|key.include?(var) && key.include?("[")}
+				num_dims = elements[0].scan(/\]\[/).size + 1
+				dim_limits = []
+				indices_value_pairs = []
+				[*(0..(num_dims-1))].each do |i|
+					dim_limit = 0
+					elements.each do |e|
+						indices = e.scan(/\[\d+\]/).map{|str|str.scan(/\d+/)[0].to_i}
+						value = lp.solution[e]
+						indices_value_pairs << [indices, value]
+						dim_limit = indices[i] if indices[i] > dim_limit
+					end
+					dim_limits << dim_limit+1
+				end
+				matrix = [].matrix(dim_limits)
+				indices_value_pairs.each do |ivp|
+					matrix.insert_at(ivp[0], ivp[1].to_f)
+				end
+				matrix_solution[var] = matrix
+			end
+			return(matrix_solution)
 		end
 	end
 
@@ -798,42 +861,42 @@ def subject_to(constraints, options=[])
 	constraints = constraints.flatten
 	constraints = OPL::Helper.split_equals_a(constraints)
 	data_names = lp.data.map{|d|d.name}
-constraints = constraints.map do |constraint|
-OPL::Helper.sub_forall(constraint)
-end.flatten
-constraints = constraints.map do |constraint|
-OPL::Helper.sum_indices(constraint)
-end
-constraints = constraints.map do |constraint|
-OPL::Helper.sub_sum(constraint)
-end
-constraints = constraints.map do |constraint|
-OPL::Helper.sum_indices(constraint)
-end
-constraints = constraints.map do |constraint|
-OPL::Helper.put_constants_on_rhs(constraint)
-end
-constraints = constraints.map do |constraint|
-OPL::Helper.put_variables_on_lhs(constraint)
-end
-constraints = constraints.map do |constraint|
-OPL::Helper.sub_rhs_with_summed_constants(constraint)
-end
-constraints = constraints.map do |constraint|
-OPL::Helper.substitute_data(constraint, lp)
-end
-constraints = constraints.map do |constraint|
-OPL::Helper.put_constants_on_rhs(constraint)
-end
-constraints = constraints.map do |constraint|
-OPL::Helper.put_variables_on_lhs(constraint)
-end
-constraints = constraints.map do |constraint|
-OPL::Helper.sub_rhs_with_summed_constants(constraint)
-end
-constraints = constraints.map do |constraint|
-OPL::Helper.sum_variables(constraint, lp)
-end
+	constraints = constraints.map do |constraint|
+		OPL::Helper.sub_forall(constraint)
+	end.flatten
+	constraints = constraints.map do |constraint|
+		OPL::Helper.sum_indices(constraint)
+	end
+	constraints = constraints.map do |constraint|
+		OPL::Helper.sub_sum(constraint)
+	end
+	constraints = constraints.map do |constraint|
+		OPL::Helper.sum_indices(constraint)
+	end
+	constraints = constraints.map do |constraint|
+		OPL::Helper.put_constants_on_rhs(constraint)
+	end
+	constraints = constraints.map do |constraint|
+		OPL::Helper.put_variables_on_lhs(constraint)
+	end
+	constraints = constraints.map do |constraint|
+		OPL::Helper.sub_rhs_with_summed_constants(constraint)
+	end
+	constraints = constraints.map do |constraint|
+		OPL::Helper.substitute_data(constraint, lp)
+	end
+	constraints = constraints.map do |constraint|
+		OPL::Helper.put_constants_on_rhs(constraint)
+	end
+	constraints = constraints.map do |constraint|
+		OPL::Helper.put_variables_on_lhs(constraint)
+	end
+	constraints = constraints.map do |constraint|
+		OPL::Helper.sub_rhs_with_summed_constants(constraint)
+	end
+	constraints = constraints.map do |constraint|
+		OPL::Helper.sum_variables(constraint, lp)
+	end
 	lp.constraints = constraints
 	all_vars = OPL::Helper.get_all_vars(constraints, lp)
 	variable_type_hash = OPL::Helper.produce_variable_type_hash(variable_types, all_vars)
@@ -993,5 +1056,6 @@ def optimize(optimization, objective, lp)
 	end
 	lp.solution = answer
 	lp.rglpk_object = p
+	lp.matrix_solution = lp.solution_as_matrix
 	lp
 end
