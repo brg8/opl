@@ -465,8 +465,107 @@ describe "lpsolve" do
 		lp.objective.optimized_value.to_f.round(2).should eq 2600.0
 	end
 
-	#multiple level data arrays with negatives and floats
-	#arithmetic in indices in data arrays
-	#arithmetic in indices in multiple level arrays
-	#go ham on testing the interactions of data, sum, and forall
+	it "solves problem 33" do
+		d = [[3,5,3],[1,2,3],[2,5,9]]
+		lp = maximize(
+			"sum(i in [1,2], j in (0..1), d[i][j+1]*x[i-1][j])",
+		subject_to([
+			"forall(i in (1..2), x[i-1][1] <= 100)",
+			"forall(i in (0..2), j in (0..2), x[i][j] <= 200)"
+		],[
+			"NONNEGATIVE: x",
+			"DATA: {d => #{d}}"
+		]
+		))
+		(lp.solution=={"x[0][1]"=>"100.0", "x[1][1]"=>"100.0", "x[0][0]"=>"200.0", "x[0][2]"=>"0.0", "x[1][0]"=>"200.0", "x[1][2]"=>"0.0", "x[2][0]"=>"0.0", "x[2][1]"=>"0.0", "x[2][2]"=>"0.0"}).should eq true
+		lp.objective.optimized_value.to_f.round(2).should eq 2600.0
+	end
+
+	it "solves problem 33" do
+		lp = maximize(
+			"sum(i in [1,2,4], j in (0..3), k in (0..1), d[i][j+1][k]*x[i-1][j][k+1])",
+		subject_to([
+			"forall(i in (0..4), j in (0..4), k in (0..1), x[i][j][k] <= 100)"
+		],[
+			"NONNEGATIVE: x",
+			"DATA: {d => [[[4.0, -2.0], [-2.0, -2.0], [4, -2.0], [-5, -2.0], [1, -2.0]], [[4, -2.0], [2, -2.0], [-5.0, -2.0], [0.5, -2.0], [2, -2.0]], [[4.5, -2.0], [0.3, -2.0], [1.3, -2.0], [2, -2.0], [-2.4, -2.0]], [[4.0, -2.0], [-2.0, -2.0], [4, -2.0], [-5, -2.0], [1, -2.0]], [[4, -2.0], [2, -2.0], [-5.0, -2.0], [0.5, -2.0], [2, -2.0]]]}"
+		]
+		))
+		lp.matrix_solution["x"].should eq [[[0.0, 100.0], [0.0, 0.0], [0.0, 100.0], [0.0, 100.0], [0.0, 0.0]], [[0.0, 100.0], [0.0, 100.0], [0.0, 100.0], [0.0, 0.0], [0.0, 0.0]], [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], [[0.0, 100.0], [0.0, 0.0], [0.0, 100.0], [0.0, 100.0], [0.0, 0.0]], [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]]]
+		lp.objective.optimized_value.should eq 1260.0
+	end
+
+	it "checks for comma placement in sum() statements" do
+		begin
+			lp = minimize(
+				"sum(i in (0..3) x[i])",
+			subject_to([
+				"forall(i in (0..3), x[i] <= 100)"
+			],[
+				"NONNEGATIVE: x"
+			]))
+		rescue Exception => e
+			e.to_s.should eq "The following sum() constraint is incorrectly formatted: i in [0, 1, 2, 3] x[i]. Please see the examples in test.rb for sum() constraints. I suspect you are missing a comma somewhere."
+		end
+	end
+
+	it "checks for comma placement in forall() statements" do
+		begin
+			lp = minimize(
+				"sum(i in (0..3), x[i])",
+			subject_to([
+				"forall(i in (0..3) x[i] <= 100)"
+			],[
+				"NONNEGATIVE: x"
+			]))
+		rescue Exception => e
+			e.to_s.should eq "The following forall() constraint is incorrectly formatted: i in [0, 1, 2, 3] x[i] <= 100. Please see the examples in test.rb for forall() constraints. I suspect you are missing a comma somewhere."
+		end
+	end
+
+	it "checks for options syntax" do
+		begin
+			lp = minimize(
+				"sum(i in (0..3), x[i])",
+			subject_to([
+				"forall(i in (0..3), x[i] <= 100)"
+			],[
+				"NONNEGATIVE x",
+				"INTEGER: x"
+			]))
+		rescue Exception => e
+			e.to_s.should eq "Options parameter 'NONNEGATIVE x' does not have a colon in it. The proper syntax of an option is TITLE: VALUE"
+		end
+	end
+
+	it "checks for options titles" do
+		begin
+			lp = minimize(
+				"sum(i in (0..3), x[i])",
+			subject_to([
+				"forall(i in (0..3), x[i] <= 100)"
+			],[
+				"NONNEGATIVEs: x",
+				"INTEGER: x"
+			]))
+		rescue Exception => e
+			e.to_s.should eq "Did not recognize the TITLE parameter 'NONNEGATIVEs' in the options."
+		end
+	end
+
+	#set up a TSP
+	#  0
+	#1  
+	# 2 
+	it "solves problem 34" do
+		lp = minimize(
+			"sum(i in (0..2), j in (0..2), d[i][j]*x[i][j])",
+		subject_to([
+			"forall(i in (0..2), sum(j in (0..2), x[i][j]) = 1)",
+			"forall(i in (0..2), x[i][i] = 0)"
+		],[
+			"BOOLEAN: x",
+			"DATA: {d => [[0,1.3,0],[0,0,1.7],[1.2,0,0]]}"
+		]))
+	end
 end

@@ -11,14 +11,15 @@ require "rglpk"
 #
 #should return an error message
 
-#2.3
-#parse data from a file
-
 #2.4
-#way more comprehensive test suite of functionality so far
+#catch this error for sum() in forall()
+	#"forall(i in (0..2), sum(j in (0..2), x[i][j] = 1))"
+	#should be:
+	#"forall(i in (0..2), sum(j in (0..2), x[i][j]) = 1)"
 
 #3.0
 #multiple level sub notation e.g. x[1][[3]]
+	#why would one use that notation rather than x[1][3]???
 
 #3.1
 #make sure extreme cases of foralls and sums
@@ -184,19 +185,27 @@ class OPL
 		end
 
 		def self.forall(text)
-			#need to be able to handle sums inside here
 			#in: "i in (0..2), x[i] <= 5"
 			#out: ["x[0] <= 5", "x[1] <= 5", "x[2] <= 5"]
+			helper = self
 			text = text.sub_paren_with_array
-			#text = sub_paren_with_array(text)
+			if ((text.gsub(" ","")).scan(/\]\,/).size) + ((text.gsub(" ","")).scan(/\)\,/).size) != text.gsub(" ","").scan(/in/).size
+				raise "The following forall() constraint is incorrectly formatted: #{text}. Please see the examples in test.rb for forall() constraints. I suspect you are missing a comma somewhere."
+			end
 			final_constraints = []
-			indices = text.scan(/[a-z] in/).map{|sc|sc[0]}
-			values = text.scan(/\s\[[\-\s\d+,]+\]/).map{|e|e.gsub(" ", "").scan(/[\-\d]+/)}
+			if text.include?("sum")
+				indices = text.split("sum")[0].scan(/[a-z] in/).map{|sc|sc[0]}
+				values = text.split("sum")[0].scan(/\s\[[\-\s\d+,]+\]/).map{|e|e.gsub(" ", "").scan(/[\-\d]+/)}
+			else
+				indices = text.scan(/[a-z] in/).map{|sc|sc[0]}
+				values = text.scan(/\s\[[\-\s\d+,]+\]/).map{|e|e.gsub(" ", "").scan(/[\-\d]+/)}
+			end
+			#TODO: the indices and values should only be those
+				#of the forall(), not of any sum() that is
+				#inside the forall()
 			index_value_pairs = indices.zip(values)
 			variable = text.scan(/[a-z]\[/)[0].gsub("[","")
-			#will need to make this multiple variables??
-				#or is this even used at all????
-			value_combinations = self.mass_product(values)
+			value_combinations = helper.mass_product(values)
 			value_combinations.each_index do |vc_index|
 				value_combination = value_combinations[vc_index]
 				value_combination = [value_combination] unless value_combination.is_a?(Array)
@@ -278,11 +287,13 @@ class OPL
 			equation.gsub("#","")
 		end
 
-		def self.sum(text, indexvalues={:indices => [], :values => []})
+		def self.sum(text, lp, indexvalues={:indices => [], :values => []})
 			#in: "i in [0,1], j in [4,-5], 3x[i][j]"
 			#out: "3x[0][4] + 3x[0][-5] + 3x[1][4] + 3x[1][-5]"
 			text = text.sub_paren_with_array
-			#text = sub_paren_with_array(text)
+			if (text.gsub(" ","")).scan(/\]\,/).size != text.scan(/in/).size
+				raise "The following sum() constraint is incorrectly formatted: #{text}. Please see the examples in test.rb for sum() constraints. I suspect you are missing a comma somewhere."
+			end
 			final_text = ""
 			element = text.split(",")[-1].gsub(" ","")
 			indices = text.scan(/[a-z] in/).map{|sc|sc[0]}
@@ -336,7 +347,7 @@ class OPL
 			final_text
 		end
 
-		def self.sub_sum(equation, indexvalues={:indices => [], :values => []})
+		def self.sub_sum(equation, lp, indexvalues={:indices => [], :values => []})
 			#in: "sum(i in (0..3), x[i]) <= 100"
 			#out: "x[0]+x[1]+x[2]+x[3] <= 100"
 			sums = (equation+"#").split("sum(").map{|ee|ee.split(")")[0..-2].join(")")}.find_all{|eee|eee!=""}.find_all{|eeee|!eeee.include?("forall")}
@@ -363,7 +374,7 @@ class OPL
 					end
 				end
 				equation = equation.gsub(text, e)
-				result = self.sum(text)
+				result = self.sum(text, lp)
 				equation = equation.gsub("sum("+text+")", result)
 			end
 			return(equation)
@@ -717,6 +728,21 @@ class OPL
 			text = text[1..-1] if text[0] == "+"
 			return(text)
 		end
+
+		def self.check_options_syntax(options)
+			return if options.empty?
+			options.each do |option|
+				if option.include?(":")
+					title = option.gsub(" ","").split(":")[0]
+					value = option.gsub(" ","").split(":")[1]
+					if !["nonnegative", "integer", "boolean", "data", "epsilon"].include?(title.downcase)
+						raise "Did not recognize the TITLE parameter '#{title}' in the options."
+					end
+				else
+					raise "Options parameter '#{option}' does not have a colon in it. The proper syntax of an option is TITLE: VALUE"
+				end
+			end
+		end
 	end
 
 	class LinearProgram
@@ -736,6 +762,8 @@ class OPL
 		attr_accessor :column_bounds
 		attr_accessor :epsilon
 		attr_accessor :matrix_solution
+		attr_accessor :error_message
+		attr_accessor :stop_processing
 
 		def keys
 			[:objective, :constraints, :rows, :solution, :formatted_constraints, :rglpk_object, :solver, :matrix, :simplex_message, :mip_message, :data]
@@ -746,6 +774,7 @@ class OPL
 			@data = []
 			@epsilon = $default_epsilon
 			@matrix_solution = {}
+			@stop_processing = false
 		end
 
 		def solution_as_matrix
@@ -844,6 +873,7 @@ class OPL
 end
 
 def subject_to(constraints, options=[])
+	OPL::Helper.check_options_syntax(options)
 	lp = OPL::LinearProgram.new
 	lp.original_constraints = constraints
 	variable_types = options.find_all{|option|option.downcase.include?("boolean") || option.downcase.include?("integer")} || []
@@ -868,7 +898,7 @@ def subject_to(constraints, options=[])
 		OPL::Helper.sum_indices(constraint)
 	end
 	constraints = constraints.map do |constraint|
-		OPL::Helper.sub_sum(constraint)
+		OPL::Helper.sub_sum(constraint, lp)
 	end
 	constraints = constraints.map do |constraint|
 		OPL::Helper.sum_indices(constraint)
@@ -967,7 +997,7 @@ end
 
 def optimize(optimization, objective, lp)
 	original_objective = objective
-	objective = OPL::Helper.sub_sum(objective)
+	objective = OPL::Helper.sub_sum(objective, lp)
 	objective = OPL::Helper.sum_indices(objective)
 	objective = OPL::Helper.substitute_data(objective, lp)
 	objective_constants = OPL::Helper.get_constants(objective)
@@ -1057,5 +1087,11 @@ def optimize(optimization, objective, lp)
 	lp.solution = answer
 	lp.rglpk_object = p
 	lp.matrix_solution = lp.solution_as_matrix
+	if lp.stop_processing
+		lp.solution = lp.error_message
+		lp.matrix_solution = lp.error_message
+		lp.rglpk_object = lp.error_message
+		lp.objective = lp.error_message
+	end
 	lp
 end
