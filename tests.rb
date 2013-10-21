@@ -567,5 +567,22 @@ describe "lpsolve" do
 			"BOOLEAN: x",
 			"DATA: {d => [[0,1.3,0],[0,0,1.7],[1.2,0,0]]}"
 		]))
+		lp.matrix_solution["x"].should eq [[0.0, 0.0, 1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
+	end
+
+	it "makes sure that there are no equality statements in sum() consraints" do
+		begin
+			lp = minimize(
+				"sum(i in (0..2), j in (0..2), d[i][j]*x[i][j])",
+			subject_to([
+				"forall(i in (0..2), sum(j in (0..2), x[i][j] = 1))",
+				"forall(i in (0..2), x[i][i] = 0)"
+			],[
+				"BOOLEAN: x",
+				"DATA: {d => [[0,1.3,0],[0,0,1.7],[1.2,0,0]]}"
+			]))
+		rescue Exception => e
+			e.to_s.should eq "The following sum() constraint cannot have a equalities in it (a.k.a. =, <, >): j in [0, 1, 2], x[0][j] <= 1"
+		end
 	end
 end

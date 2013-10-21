@@ -11,12 +11,6 @@ require "rglpk"
 #
 #should return an error message
 
-#2.4
-#catch this error for sum() in forall()
-	#"forall(i in (0..2), sum(j in (0..2), x[i][j] = 1))"
-	#should be:
-	#"forall(i in (0..2), sum(j in (0..2), x[i][j]) = 1)"
-
 #3.0
 #multiple level sub notation e.g. x[1][[3]]
 	#why would one use that notation rather than x[1][3]???
@@ -293,6 +287,8 @@ class OPL
 			text = text.sub_paren_with_array
 			if (text.gsub(" ","")).scan(/\]\,/).size != text.scan(/in/).size
 				raise "The following sum() constraint is incorrectly formatted: #{text}. Please see the examples in test.rb for sum() constraints. I suspect you are missing a comma somewhere."
+			elsif (text.gsub(" ","").include?("=") || text.gsub(" ","").include?("<") || text.gsub(" ","").include?(">"))
+				raise "The following sum() constraint cannot have a equalities in it (a.k.a. =, <, >): #{text}"
 			end
 			final_text = ""
 			element = text.split(",")[-1].gsub(" ","")
