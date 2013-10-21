@@ -136,7 +136,11 @@ describe "lpsolve" do
 		lp = minimize(
 			"sum(i in (0..3), x[i])",
 		subject_to([
-			"sum(i in (0..1), x[i]) + sum(i in [2,3], 2x[i]) >= 20"
+			"sum(i in (0..1), x[i]) + sum(i in [2,3], 2x[i]) >= 20",
+			"x[0] >= 0",
+			"x[1] >= 0",
+			"x[2] >= 0",
+			"x[3] >= 0"
 		]))
 		(lp.solution=={"x[0]"=>"0.0", "x[1]"=>"0.0", "x[2]"=>"10.0", "x[3]"=>"0.0"}).should eq true
 		lp.objective.optimized_value.to_f.round(2).should eq 10.0
@@ -170,7 +174,8 @@ describe "lpsolve" do
 			"sum(i in (0..3), j in (0..3), x[i][j])",
 		subject_to([
 			"forall(i in (0..3), sum(j in (i..3), x[i][j]) >= i)",
-			"forall(i in (0..3), sum(j in (0..i), x[i][j]) >= i)"
+			"forall(i in (0..3), sum(j in (0..i), x[i][j]) >= i)",
+			"forall(i in (0..3), j in (0..3), x[i][j] >= 0)"
 		]))
 		(lp.solution=={"x[0][0]"=>"0.0", "x[0][1]"=>"0.0", "x[0][2]"=>"0.0", "x[0][3]"=>"0.0", "x[1][1]"=>"1.0", "x[1][2]"=>"0.0", "x[1][3]"=>"0.0", "x[2][2]"=>"2.0", "x[2][3]"=>"0.0", "x[3][3]"=>"3.0", "x[1][0]"=>"0.0", "x[2][0]"=>"0.0", "x[2][1]"=>"0.0", "x[3][0]"=>"0.0", "x[3][1]"=>"0.0", "x[3][2]"=>"0.0"}).should eq true
 		lp.objective.optimized_value.to_f.round(2).should eq 6.0

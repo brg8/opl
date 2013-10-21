@@ -1,22 +1,8 @@
 require "rglpk"
 
-#TODO
-#unbounded or conflicting bounds messages
-#	e.g.
-#		lp = maximize(
-#			"x",
-#		subject_to([
-#			"x >= 0"
-#		]))
-#
-#should return an error message
-
-#3.0
-#multiple level sub notation e.g. x[1][[3]]
-	#why would one use that notation rather than x[1][3]???
-
 #3.1
-#make sure extreme cases of foralls and sums
+#Implement more advanced TSPs in order to
+	#make sure extreme cases of foralls and sums
 	#are handled
 
 #4.0
@@ -760,6 +746,7 @@ class OPL
 		attr_accessor :matrix_solution
 		attr_accessor :error_message
 		attr_accessor :stop_processing
+		attr_accessor :solution_type
 
 		def keys
 			[:objective, :constraints, :rows, :solution, :formatted_constraints, :rglpk_object, :solver, :matrix, :simplex_message, :mip_message, :data]
@@ -1088,6 +1075,13 @@ def optimize(optimization, objective, lp)
 		lp.matrix_solution = lp.error_message
 		lp.rglpk_object = lp.error_message
 		lp.objective = lp.error_message
+	end
+	if lp.rglpk_object.status.to_s == "4"
+		raise "There is no feasible solution."
+	elsif lp.rglpk_object.status.to_s == "6"
+		raise "The solution is unbounded."
+	elsif lp.rglpk_object.status.to_s == "1"
+		raise "The solution is undefined."
 	end
 	lp
 end
