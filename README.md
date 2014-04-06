@@ -15,7 +15,7 @@ Please send comments, suggestions, bugs, complaints, party invites to bgodlove88
 
 A quick view at some examples of functionality:
 
-Summation and Forall constraints:
+## Summation and Forall constraints:
 ```
 maximize(  
   "sum(i in (0..3) x[i])",  
@@ -23,7 +23,7 @@ subject_to([
   "forall(i in (0..3), x[i] <= 3)"  
 ]))
 ```
-Easy specification of variable types:
+## Easy specification of variable types:
 ```
 lp = maximize(  
 	"10x1 + 6x2 + 4x3",  
@@ -40,7 +40,7 @@ subject_to([
 ]  
 ))
 ```
-Access to epsilon for strict inequalities:
+## Access to epsilon for strict inequalities:
 ```
 lp = maximize(  
 	"x + y + z",  
