@@ -43,13 +43,13 @@ describe "lpsolve" do
 
 	it "solves problem 3" do
 		lp = minimize(
-			"a - x4",
+			"c - x4",
 		subject_to([
-			"a + x4 >= 4",
-			"a + x4 <= 10",
-			"a >= 0"
+			"c + x4 >= 4",
+			"c + x4 <= 10",
+			"c >= 0"
 		]))
-		lp.solution["a"].to_f.round(2).should eq 0.0
+		lp.solution["c"].to_f.round(2).should eq 0.0
 		lp.solution["x4"].to_f.round(2).should eq 10.0
 		lp.objective.optimized_value.to_f.round(2).should eq -10.0
 	end
@@ -427,12 +427,12 @@ describe "lpsolve" do
 
 	it "solves problem 30" do
 		lp = minimize(
-			"d + a[0]x[0] + a[1]x[1]",
+			"d + c[0]x[0] + c[1]x[1]",
 		subject_to([
-			"a[0]x[0] - x[1] + 14 <= d",
+			"c[0]x[0] - x[1] + 14 <= d",
 		],[
-			"NONNEGATIVE: a, x",
-			"DATA: {a => [3.3, 4.7], d => 4}"
+			"NONNEGATIVE: c, x",
+			"DATA: {c => [3.3, 4.7], d => 4}"
 		]
 		))
 		lp.solution["x[0]"].to_f.round(2).should eq 0.0
@@ -442,12 +442,12 @@ describe "lpsolve" do
 
 	it "solves problem 31" do
 		lp = minimize(
-			"d + sum(i in (0..1), a[i]x[i] + dx[i] - d)",
+			"d + sum(i in (0..1), c[i]x[i] + dx[i] - d)",
 		subject_to([
-			"a[0]x[0] - x[1] + 14 <= d",
+			"c[0]x[0] - x[1] + 14 <= d",
 		],[
-			"NONNEGATIVE: a, x",
-			"DATA: {a => [3.3, 4.7], d => 4}"
+			"NONNEGATIVE: c, x",
+			"DATA: {c => [3.3, 4.7], d => 4}"
 		]
 		))
 		lp.solution["x[0]"].to_f.round(2).should eq 0.0
@@ -590,4 +590,83 @@ describe "lpsolve" do
 			e.to_s.should eq "The following sum() constraint cannot have a equalities in it (a.k.a. =, <, >): j in [0, 1, 2], x[0][j] <= 1"
 		end
 	end
+
+	it "solves problem 35" do
+		lp = maximize(
+			"x",
+		subject_to([
+			"abs(x) <= 4"
+		],[
+		]))
+		lp.solution["x"].to_f.round(2).should eq 4.0
+	end
+
+	it "solves problem 36" do
+		lp = maximize(
+			"x + y + z",
+		subject_to([
+			"4 + abs(x + 4*y) <= 4*z",
+			"abs(-3*x + z) <= 3",
+			"z <= 3"
+		],[
+		]))
+		lp.solution["x"].to_f.round(2).should eq 2.0
+		lp.solution["y"].to_f.round(2).should eq 1.5
+		lp.solution["z"].to_f.round(2).should eq 3.0
+	end
+#
+#	it "solves problem 37" do
+#		lp = maximize(
+#			"x + y + z",
+#		subject_to([
+#			"4 + abs(x + 4*y) + abs(x) <= 4*z",
+#			"abs(-3*x + z) <= 3",
+#			"z <= 3"
+#		],[
+#		]))
+#	end
+
+	it "solves problem 38" do
+		lp = minimize(
+			"sum(i in (0..3), x[i])",
+		subject_to([
+			"forall(i in (0..2), abs(x[i] - x[i+1]) <= 3)",
+			"forall(i in (0..2), abs(x[i]) <= 10)"
+		],[
+		]))
+		lp.solution_as_matrix["x"].should eq [-10.0, -10.0, -10.0, -13.0]
+	end
+=begin
+	it "solves problem 36" do
+		lp = minimize(
+			"abs(x)",
+		subject_to([
+			"x <= 4",
+		],[
+		]))
+		lp.solution["x"].should eq 0.0
+	end
+
+	it "solves problem 37" do
+		lp = minimize(
+			"abs(x[0] + x[1])",
+		subject_to([
+			"forall(i in (0..1), x[i] <= 2)",
+			"forall(i in (0..1), x[i] >= 1)"
+		],[
+		]))
+		lp.solution["x"].should eq 1.0
+	end
+
+	it "solves problem 38" do
+		lp = minimize(
+			"sum(i in (0..2), abs(x[i]))",
+		subject_to([
+			"forall(i in (0..2), x[i] <= 3)",
+			"forall(i in (0..2), x[i] >= 2)"
+		],[
+		]))
+		lp.solution["x"].should eq 2.0
+	end
+=end
 end

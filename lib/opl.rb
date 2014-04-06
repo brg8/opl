@@ -1,25 +1,62 @@
 require "rglpk"
 
-#3.1
 #Implement more advanced TSPs in order to
 	#make sure extreme cases of foralls and sums
 	#are handled
+#Make an ERRORS : ON option
 
-#4.0
-#absolute value: abs()
+# need to handle multiple abs() in one constraint:
+#
+# 4 + abs(x - y) + abs(z) <= 4
+#
+# still need to implement abs() in objective
+# I am not sure how to handle arithmetic inside
+# an abs() in an objective function
+#
+# perhaps I should split into two LPs,
+# one with +objective and one with -objective,
+# solve both, and then take the more optimal solution
+#
+# maximize(abs(x))
+# subject to:
+#   x < 3
+#   x > -7
+#
+# we set x = x1 - x2, x1,x2>=0
+# so abs(x) = x1 + x2
+# the lp should become
+#
+# maximize(x1 + x2)
+# subject to:
+#   x1 - x2 < 3
+#   x1 - x2 > -7
+#   NONNEGATIVE: x1, x2
 
-#4.1
+#3.2
 #if --> then statements
 
-#4.2
+#3.3
 #or statements
 
-#4.3
+#3.4
 #piecewise statements
 
-#4.4
+#3.5
 #duals, sensitivity, etc. - I could simply allow
 	#access to the rglpk object wrapper
+
+#4.0
+#import excel sheets as data
+
+#4.1
+#add a SUBTOURS: option to eliminate subtours in a TSP
+
+#4.2
+#have an option where you can pass in a function.
+	#the function takes the resulting lp as input.
+	#you can add constraints based on the lp and re-run it.
+	#this will be useful for adding sub-tours to a problem
+	#without having to look at the output manually every time
 
 $default_epsilon = 0.01
 
@@ -89,6 +126,23 @@ class String
 	def to_a
 		self.to_array
 	end
+
+	def index_array(str)
+		indices = []
+		string = self
+		ignore_indices = []
+		search_length = str.size
+		[*(0..string.size-1)].each do |i|
+			if !ignore_indices.include?(i)
+				compare_str = string[i..(i+search_length-1)]
+				if compare_str == str
+					indices << i
+					ignore_indices = ignore_indices + [i..(i+search_length-1)]
+				end
+			end
+		end
+		return(indices)
+	end
 end
 
 class Array
@@ -147,7 +201,7 @@ class Array
 			return(arr)
 		else
 			arr[position_arr[0]].insert_at(position_arr[1..-1], value)
-		end				
+		end
 	end
 end
 
@@ -332,32 +386,34 @@ class OPL
 		def self.sub_sum(equation, lp, indexvalues={:indices => [], :values => []})
 			#in: "sum(i in (0..3), x[i]) <= 100"
 			#out: "x[0]+x[1]+x[2]+x[3] <= 100"
-			sums = (equation+"#").split("sum(").map{|ee|ee.split(")")[0..-2].join(")")}.find_all{|eee|eee!=""}.find_all{|eeee|!eeee.include?("forall")}
-			sums.each do |text|
-				e = text
-				unless indexvalues[:indices].empty?
-					indexvalues[:indices].each_index do |i|
-						index = indexvalues[:indices][i]
-						value = indexvalues[:values][i].to_s
-						e = e.gsub("("+index, "("+value)
-						e = e.gsub(index+")", value+")")
-						e = e.gsub("["+index, "["+value)
-						e = e.gsub(index+"]", value+"]")
-						e = e.gsub("=>"+index, "=>"+value)
-						e = e.gsub("<="+index, "<="+value)
-						e = e.gsub(">"+index, ">"+value)
-						e = e.gsub("<"+index, "<"+value)
-						e = e.gsub("="+index, "="+value)
-						e = e.gsub("=> "+index, "=> "+value)
-						e = e.gsub("<= "+index, "<= "+value)
-						e = e.gsub("> "+index, "> "+value)
-						e = e.gsub("< "+index, "< "+value)
-						e = e.gsub("= "+index, "= "+value)
+			if equation.include?("sum(")
+				sums = (equation+"#").split("sum(").map{|ee|ee.split(")")[0..-2].join(")")}.find_all{|eee|eee!=""}.find_all{|eeee|!eeee.include?("forall")}
+				sums.each do |text|
+					e = text
+					unless indexvalues[:indices].empty?
+						indexvalues[:indices].each_index do |i|
+							index = indexvalues[:indices][i]
+							value = indexvalues[:values][i].to_s
+							e = e.gsub("("+index, "("+value)
+							e = e.gsub(index+")", value+")")
+							e = e.gsub("["+index, "["+value)
+							e = e.gsub(index+"]", value+"]")
+							e = e.gsub("=>"+index, "=>"+value)
+							e = e.gsub("<="+index, "<="+value)
+							e = e.gsub(">"+index, ">"+value)
+							e = e.gsub("<"+index, "<"+value)
+							e = e.gsub("="+index, "="+value)
+							e = e.gsub("=> "+index, "=> "+value)
+							e = e.gsub("<= "+index, "<= "+value)
+							e = e.gsub("> "+index, "> "+value)
+							e = e.gsub("< "+index, "< "+value)
+							e = e.gsub("= "+index, "= "+value)
+						end
 					end
+					equation = equation.gsub(text, e)
+					result = self.sum(text, lp)
+					equation = equation.gsub("sum("+text+")", result)
 				end
-				equation = equation.gsub(text, e)
-				result = self.sum(text, lp)
-				equation = equation.gsub("sum("+text+")", result)
 			end
 			return(equation)
 		end
@@ -376,8 +432,11 @@ class OPL
 		end
 
 		def self.variables(text, lp)#parameter is one side of the equation
-			equation = self.add_ones(text, lp)
-			equation.scan(/[a-z]+[\[\]\d]*/)
+			text = self.add_ones(text, lp)
+			text = text.gsub("abs","").gsub("(","").gsub(")","")
+			variables = text.scan(/[a-z][\[\]\d]*/)
+			raise("The variable letter a is reserved for special processes. Please rename your variable to something other than a.") if variables.join.include?("a")
+			return variables
 		end
 
 		def self.get_all_vars(constraints, lp)
@@ -725,6 +784,72 @@ class OPL
 				end
 			end
 		end
+
+		def self.negate(text, explicit=false)
+			# text is one side of an equation
+			# there will be no foralls, no sums, and no abs
+			# in: "z - 3"
+			# out: "-z + 3"
+			working_text = text = text.gsub(" ","")
+			#!("a".."z").to_a.include?(text[0]) && 
+			if !["-","+"].include?(text[0])
+				working_text = "+"+working_text
+			end
+			indices_of_negatives = working_text.index_array("-")
+			indices_of_positives = working_text.index_array("+")
+			indices_of_negatives.each {|i| working_text[i] = "+"}
+			indices_of_positives.each {|i| working_text[i] = "-"}
+			if !explicit && working_text[0] == "+"
+				working_text = working_text[1..-1]
+			end
+			return(working_text)
+		end
+
+		def self.replace_absolute_value(text)
+			# text is a constraint
+			# there will be no foralls and no sums
+			# in: "abs(x) <= 1"
+			# out: "x <= 1", "-x <= 1"
+			# in: "4x + 3y - 6abs(z - 3) <= 4"
+			# out: "4x + 3y - 6z + 18 <= 4", "4x + 3y + 6z - 18 <= 4"
+			if text.include?("abs")
+				helper = self
+				constraints_to_delete = [text]
+				text = text.gsub(" ","")
+				constraints_to_delete << text
+				working_text = "#"+text
+				absolute_value_elements = working_text.scan(/[\-\+\#]\d*abs\([a-z\-\+\*\d\[\]]+\)/)
+				constraints_to_add = []
+				absolute_value_elements.each do |ave|
+					ave = ave.gsub("#","")
+					inside_value = ave.split("(")[1].split(")")[0]
+					positive_ave = inside_value
+					negative_ave = helper.negate(inside_value)
+					if ave[0] == "-" || ave[1] == "-"
+						positive_ave = helper.negate(positive_ave, true)
+						negative_ave = helper.negate(negative_ave, true)
+					elsif ave[0] == "+"
+						positive_ave = "+"+positive_ave
+					end
+					positive_constraint = text.gsub(ave, positive_ave)
+					negative_constraint = text.gsub(ave, negative_ave)
+					constraints_to_add << positive_constraint
+					constraints_to_add << negative_constraint
+				end
+				return {:constraints_to_delete => constraints_to_delete, :constraints_to_add => constraints_to_add}
+			else
+				return {:constraints_to_delete => [], :constraints_to_add => []}
+			end
+		end
+
+		def self.strip_abs(text)
+			# in: "3 + abs(x[1] - y) + abs(x[3]) <= 3*abs(-x[2])"
+			# out: {:positive => "3 + x[1] - y + x[3] <= -3*x[2]",
+			#       :negative => "3 - x[1] + y - x[3] <= 3*x[2]"}
+			text = text.gsub(" ","")
+			working_text = "#"+text
+
+		end
 	end
 
 	class LinearProgram
@@ -747,6 +872,7 @@ class OPL
 		attr_accessor :error_message
 		attr_accessor :stop_processing
 		attr_accessor :solution_type
+		attr_accessor :negated_objective_lp
 
 		def keys
 			[:objective, :constraints, :rows, :solution, :formatted_constraints, :rglpk_object, :solver, :matrix, :simplex_message, :mip_message, :data]
@@ -788,6 +914,20 @@ class OPL
 				matrix_solution[var] = matrix
 			end
 			return(matrix_solution)
+		end
+
+		def recreate_with_objective_abs(objective)
+			#in: "abs(x)"
+			#out: {:objective => "x1 + x2", :constraints => "x1 * x2 = 0"}
+			#this is a really tough problem - first time I am considering
+				#abandoning the string parsing approach. Really need to think
+				#about how to attack this
+			lp_class = self
+			helper = OPL::Helper
+			variabes = helper.variables(objective, lp_class.new)
+			new_objective = ""
+			constraints_to_add = []
+			#return(self)
 		end
 	end
 
@@ -886,6 +1026,16 @@ def subject_to(constraints, options=[])
 	constraints = constraints.map do |constraint|
 		OPL::Helper.sum_indices(constraint)
 	end
+	new_constraints = []
+	constraints.each do |constraint|
+		replace_absolute_value_results = OPL::Helper.replace_absolute_value(constraint)
+		if replace_absolute_value_results[:constraints_to_add].empty?
+			new_constraints << constraint
+		else
+			new_constraints += replace_absolute_value_results[:constraints_to_add]
+		end
+	end
+	constraints = new_constraints
 	constraints = constraints.map do |constraint|
 		OPL::Helper.put_constants_on_rhs(constraint)
 	end
@@ -980,6 +1130,11 @@ end
 
 def optimize(optimization, objective, lp)
 	original_objective = objective
+	while original_objective.include?("abs")
+		#need to add some constraints, change the objective,
+			#and reprocess the constraints
+		#lp = lp.recreate_with_objective_abs(original_objective)
+	end
 	objective = OPL::Helper.sub_sum(objective, lp)
 	objective = OPL::Helper.sum_indices(objective)
 	objective = OPL::Helper.substitute_data(objective, lp)
