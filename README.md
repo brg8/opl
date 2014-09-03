@@ -82,3 +82,19 @@ subject_to([
 ))  
 ```
 Which is solvable in a few milliseconds and clearly does not affect the result.
+
+## Use ruby data matrices:
+```
+d = [[3,5,3],[1,2,3],[2,5,9]]
+
+lp = maximize(
+	"sum(i in [1,2], j in (0..1), d[i][j+1]*x[i-1][j])",
+subject_to([
+	"forall(i in (1..2), x[i-1][1] <= 100)",
+	"forall(i in (0..2), j in (0..2), x[i][j] <= 200)"
+],[
+	"NONNEGATIVE: x",
+	"DATA: {d => #{d}}"
+]
+))
+```
