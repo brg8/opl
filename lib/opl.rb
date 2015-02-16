@@ -193,6 +193,10 @@ class OPL
 			#in: "i in [0,1], j in [4,-5], 3x[i][j]"
 			#out: "3x[0][4] + 3x[0][-5] + 3x[1][4] + 3x[1][-5]"
 			text = text.sub_paren_with_array
+			if text.scan(/\(\d+\+\d+\)/).size > 0
+				text.scan(/\(\d+\+\d+\)/).each {|e| text = text.gsub(e,eval(e.gsub("(","").gsub(")","")).to_s) }
+			end
+			text = text.sub_paren_with_array
 			if (text.gsub(" ","")).scan(/\]\,/).size != text.scan(/in/).size
 				raise "The following sum() constraint is incorrectly formatted: #{text}. Please see the examples in test.rb for sum() constraints. I suspect you are missing a comma somewhere."
 			elsif (text.gsub(" ","").include?("=") || text.gsub(" ","").include?("<") || text.gsub(" ","").include?(">"))

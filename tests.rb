@@ -591,6 +591,82 @@ describe "lpsolve" do
 		end
 	end
 
+	it "solves this sudoku" do
+		d = [
+		  [0,0,0,2,6,0,7,0,1],
+		  [6,8,0,0,7,0,0,9,0],
+		  [1,9,0,0,0,4,5,0,0],
+		  [8,2,0,1,0,0,0,4,0],
+		  [0,0,4,6,0,2,9,0,0],
+		  [0,5,0,0,0,3,0,2,8],
+		  [0,0,9,3,0,0,0,7,4],
+		  [0,4,0,0,5,0,0,3,6],
+		  [7,0,3,0,1,8,0,0,0]
+		]
+
+		size = d.count
+		rubysize = size-1
+
+		constant_constraints = []
+		d.each_index do |i|
+			row = d[i]
+
+			row.each_index do |j|
+				element = d[i][j]
+
+				if element != 0
+					constant_constraints << "x[#{i}][#{j}][#{element-1}] = 1"
+				end
+			end
+		end
+
+		gridconstraints = []
+		arr = [0,3,6]
+	  arr.each do |u|
+	    arr.each do |v|
+	      gridconstraints << "forall(k in (0..#{rubysize}), sum(i in (#{u}..#{(size/3)-1+u}), j in (#{v}..#{(size/3)-1+v}), x[i][j][k]) = 1)"
+	    end
+	  end
+
+	  lp = minimize("y", subject_to([
+	    "y = 2",# y is a dummy variable so I don't have to worry about the objective function
+	    "forall(i in (0..#{rubysize}), j in (0..#{rubysize}), sum(k in (0..#{rubysize}), x[i][j][k]) = 1)",# an element contains only one number
+	    "forall(i in (0..#{rubysize}), k in (0..#{rubysize}), sum(j in (0..#{rubysize}), x[i][j][k]) = 1)",# every row contains every number
+	    "forall(j in (0..#{rubysize}), k in (0..#{rubysize}), sum(i in (0..#{rubysize}), x[i][j][k]) = 1)",# every column contains every number
+	    # gridconstraints,# every 3x3 grid contains every number
+	    "forall(u in [0,3,6], v in [0,3,6], k in (0..#{rubysize}), sum(i in ((0+u)..(#{(size/3)-1}+u)), j in ((0+v)..(#{(size/3)-1}+v)), x[i][j][k]) = 1)",# every 3x3 grid contains every number
+	    constant_constraints# some elements already have their values set
+	  ].flatten,["BOOLEAN: x"]))
+
+	  mat = lp.matrix_solution["x"]
+
+	  sol = Array.new(mat[0][0].size) { Array.new(mat[0][0].size, 0) }
+
+	  mat.each_index do |i|
+	    mat[i].each_index do |j|
+	      mat[i][j].each_index do |k|
+	        if mat[i][j][k].to_f == 1.0
+	          sol[i][j] = k+1
+	        end
+	      end
+	    end
+	  end;""
+
+	  sol.should eq(
+	  	[
+	  	[4, 3, 5, 2, 6, 9, 7, 8, 1],
+			[6, 8, 2, 5, 7, 1, 4, 9, 3],
+			[1, 9, 7, 8, 3, 4, 5, 6, 2],
+			[8, 2, 6, 1, 9, 5, 3, 4, 7],
+			[3, 7, 4, 6, 8, 2, 9, 1, 5],
+			[9, 5, 1, 7, 4, 3, 6, 2, 8],
+			[5, 1, 9, 3, 2, 6, 8, 7, 4],
+			[2, 4, 8, 9, 5, 7, 1, 3, 6],
+			[7, 6, 3, 4, 1, 8, 2, 5, 9]
+			]
+		)
+	end
+
 	# it "solves problem 35" do
 	# 	lp = maximize(
 	# 		"x",
