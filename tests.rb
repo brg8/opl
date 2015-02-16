@@ -591,15 +591,15 @@ describe "lpsolve" do
 		end
 	end
 
-	it "solves problem 35" do
-		lp = maximize(
-			"x",
-		subject_to([
-			"x <= 10 or x <= 20"
-		])
-		)
-		lp.solution["x"].to_f.round(2).should eq 20.0
-	end
+	# it "solves problem 35" do
+	# 	lp = maximize(
+	# 		"x",
+	# 	subject_to([
+	# 		"x <= 10 or x <= 20"
+	# 	])
+	# 	)
+	# 	lp.solution["x"].to_f.round(2).should eq 20.0
+	# end
 =begin
 	it "solves problem 35" do
 		lp = maximize(
