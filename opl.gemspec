@@ -6,7 +6,7 @@ Gem::Specification.new do |s|
 	s.description = "Built on top of the rglpk gem for linear programming, this gem is meant to give you a beautifully simple way to formulate your linear or mixed integer program. The syntax is inspired by OPL Studio, which remains my favorite linear programming software, but the license is quite expensive."
 	s.authors = ["Benjamin Godlove"]
 	s.email = "bgodlove88@gmail.com"
-	s.files = ["lib/opl.rb"]
+	s.files = ["lib/opl.rb", "lib/string.rb"]
 	s.homepage = "http://github.com/brg8/opl"
 	s.license = "GNU"
 end

@@ -595,6 +595,16 @@ describe "lpsolve" do
 		lp = maximize(
 			"x",
 		subject_to([
+			"x <= 10 or x <= 20"
+		])
+		)
+		lp.solution["x"].to_f.round(2).should eq 20.0
+	end
+=begin
+	it "solves problem 35" do
+		lp = maximize(
+			"x",
+		subject_to([
 			"abs(x) <= 4"
 		],[
 		]))
@@ -614,6 +624,7 @@ describe "lpsolve" do
 		lp.solution["y"].to_f.round(2).should eq 1.5
 		lp.solution["z"].to_f.round(2).should eq 3.0
 	end
+=end
 #
 #	it "solves problem 37" do
 #		lp = maximize(
@@ -625,7 +636,7 @@ describe "lpsolve" do
 #		],[
 #		]))
 #	end
-
+=begin
 	it "solves problem 38" do
 		lp = minimize(
 			"sum(i in (0..3), x[i])",
@@ -636,6 +647,7 @@ describe "lpsolve" do
 		]))
 		lp.solution_as_matrix["x"].should eq [-10.0, -10.0, -10.0, -13.0]
 	end
+=end
 =begin
 	it "solves problem 36" do
 		lp = minimize(

@@ -1,10 +1,14 @@
 require "rglpk"
+require_relative "string.rb"
+require_relative "array.rb"
 
-#Implement more advanced TSPs in order to
+# Notes for future functionality
+#
+# Implement more advanced TSPs in order to
 	#make sure extreme cases of foralls and sums
 	#are handled
-#Make an ERRORS : ON option
-
+# Make an ERRORS : ON option
+#
 # need to handle multiple abs() in one constraint:
 #
 # 4 + abs(x - y) + abs(z) <= 4
@@ -32,178 +36,42 @@ require "rglpk"
 #   x1 - x2 > -7
 #   NONNEGATIVE: x1, x2
 
-#3.2
-#if --> then statements
+# 3.2
+# or statements
+# in order to do this I first have to do some refactoring:
+# constraints need to be immediately turned in to objects
+# step 1: turn constraints into objects and make current code work
+# step 2: add a property to Constraint called or_index
+# 		The or_index property represents the m[i] that belongs to that constraint
+# step 3: after parsing is done, add the m[i] code
+# Turning objects into constraints will be useful for any processing
+# 		that I want to leave for later - i.e. if-->then, piecewise
 
-#3.3
-#or statements
+# 3.3
+# if --> then statements
 
-#3.4
-#piecewise statements
+# 3.4
+# piecewise statements
 
-#3.5
-#duals, sensitivity, etc. - I could simply allow
+# 3.5
+# duals, sensitivity, etc. - I could simply allow
 	#access to the rglpk object wrapper
 
-#4.0
-#import excel sheets as data
+# 4.0
+# import excel sheets as data
 
-#4.1
-#add a SUBTOURS: option to eliminate subtours in a TSP
+# 4.1
+# add a SUBTOURS: option to eliminate subtours in a TSP
 
-#4.2
-#have an option where you can pass in a function.
+# 4.2
+# have an option where you can pass in a function.
 	#the function takes the resulting lp as input.
 	#you can add constraints based on the lp and re-run it.
 	#this will be useful for adding sub-tours to a problem
 	#without having to look at the output manually every time
 
 $default_epsilon = 0.01
-
-class String
-	def paren_to_array
-		#in: "(2..5)"
-		#out: "[2,3,4,5]"
-		text = self
-		start = text[1].to_i
-		stop = text[-2].to_i
-		(start..stop).map{|i|i}.to_s
-	end
-
-	def sub_paren_with_array
-		text = self
-		targets = text.scan(/\([\d]+\.\.[\d]+\)/)
-		targets.each do |target|
-			text = text.gsub(target, target.paren_to_array)
-		end
-		return(text)
-	end
-
-	def to_array(current_array=[self])
-		#in: "[1,2,[3,4],[4,2,[3,2,[4,2]]],2,[4,2]]"
-		#out: [1,2,[3,4],[4,2,[3,2,[4,2]]],2,[4,2]]
-		def current_level_information(b)
-			b = b.gsub(" ","")
-			stripped_array = b[1..-2]
-			in_array = 0
-			inside_arrays_string = ""
-			inside_values_string = ""
-			stripped_array.split("").each do |char|
-				if char == "["
-					in_array += 1
-				elsif char == "]"
-					in_array += -1
-				end
-				if (in_array > 0) || (char == "]")
-					inside_arrays_string += char
-				end
-			end
-			stripped_array_without_arrays = stripped_array
-			inside_arrays_string.gsub("][","],,,[").split(",,,").each do |str|
-				stripped_array_without_arrays = stripped_array_without_arrays.gsub(str,"")
-			end
-			inside_values_string = stripped_array_without_arrays.split(",").find_all{|e|e!=""}.join(",")
-			return {:values => inside_values_string, :arrays => inside_arrays_string}
-		end
-		if !current_array.join(",").include?("[")
-			return(current_array)
-		else
-			a = []
-			element = current_array.find_all{|e|e.include?("[")}.first
-			i = current_array.index(element)
-			info = current_level_information(element)
-			info[:values].split(",").each do |v|
-				a << v
-			end
-			info[:arrays].gsub("][","],,,[").split(",,,").each do |v|
-				a << v.to_array
-			end
-			current_array[i] = a
-			return(current_array[0])
-		end
-	end
-
-	def to_a
-		self.to_array
-	end
-
-	def index_array(str)
-		indices = []
-		string = self
-		ignore_indices = []
-		search_length = str.size
-		[*(0..string.size-1)].each do |i|
-			if !ignore_indices.include?(i)
-				compare_str = string[i..(i+search_length-1)]
-				if compare_str == str
-					indices << i
-					ignore_indices = ignore_indices + [i..(i+search_length-1)]
-				end
-			end
-		end
-		return(indices)
-	end
-end
-
-class Array
-	def dimension
-		a = self
-		return 0 if a.class != Array
-		result = 1
-		a.each do |sub_a|
-			if sub_a.class == Array
-				dim = sub_a.dimension
-				result = dim + 1 if dim + 1 > result
-			end
-		end
-		return result
-	end
-
-	def values_at_a(indices, current_array=self)
-		#in: self = [3,4,[6,5,[3,4]],3], indices = [2,2,0]
-		#out: 3
-		if indices.size == 1
-			return(current_array[indices[0]])
-		else
-			values_at_a(indices[1..-1], current_array[indices[0]])
-		end
-	end
-
-	def inject_dim(int)
-		arr = self
-		int.times do
-			arr << []
-		end
-		arr
-	end
-
-	def matrix(int_arr, current_arr=[])		
-		int = int_arr[0]
-		new_int_arr = int_arr[1..-1]
-		if int_arr.empty?
-			return(current_arr)
-		else
-			if current_arr.empty?
-				new_arr = current_arr.inject_dim(int)
-				self.matrix(new_int_arr, new_arr)
-			else
-				current_arr.each do |arr|
-					arr.matrix(int_arr, arr)
-				end
-			end
-		end
-	end
-
-	def insert_at(position_arr, value)
-		arr = self
-		if position_arr.size == 1
-			arr[position_arr[0]] = value
-			return(arr)
-		else
-			arr[position_arr[0]].insert_at(position_arr[1..-1], value)
-		end
-	end
-end
+$default_m = 1000000000000.0
 
 class OPL
 	class Helper
@@ -436,6 +304,7 @@ class OPL
 			text = text.gsub("abs","").gsub("(","").gsub(")","")
 			variables = text.scan(/[a-z][\[\]\d]*/)
 			raise("The variable letter a is reserved for special processes. Please rename your variable to something other than a.") if variables.join.include?("a")
+			raise("The variable letter m is reserved for special processes. Please rename your variable to something other than m.") if variables.join.include?("m")
 			return variables
 		end
 
@@ -850,6 +719,22 @@ class OPL
 			working_text = "#"+text
 
 		end
+
+		def self.either_or(lp, constraint1, constraint2, i)
+			# in: lp, "10.0*x1+4.0*x2+5.0*x3<=600", "2.0*x1+2.0*x2+6.0*x3<=300"
+			# out: "10.0*x1+4.0*x2+5.0*x3<=600+#{$default_m}", "2.0*x1+2.0*x2+6.0*x3<=300+#{$default_m}"
+			index1 = lp.constraints.index(constraint1)
+			lp.constraints[index1] = lp.constraints[index1]+"#{$default_m}*m[#{i}]"
+			# add "+M[n]y[n]" to the rhs of the constraint
+		end
+
+		# make a default OPTION that m is BOOLEAN
+		def self.split_ors(lp, constraints)
+			# in: ["x <= 10", "y <= 24 or y + x <= 14"]
+			# out: ["x <= 10", "y - 1000000000000.0*m[0] <= 24", "y + x - 1000000000000.0 + 1000000000000.0*m[0] <= 14"]
+
+			# add m[i+1] to left side of constraints
+		end
 	end
 
 	class LinearProgram
@@ -873,6 +758,7 @@ class OPL
 		attr_accessor :stop_processing
 		attr_accessor :solution_type
 		attr_accessor :negated_objective_lp
+		attr_accessor :m_index
 
 		def keys
 			[:objective, :constraints, :rows, :solution, :formatted_constraints, :rglpk_object, :solver, :matrix, :simplex_message, :mip_message, :data]
@@ -1012,6 +898,7 @@ def subject_to(constraints, options=[])
 	end
 	lp.epsilon = epsilon
 	constraints = constraints.flatten
+	#constraints = constraints.split_ors(constraints)
 	constraints = OPL::Helper.split_equals_a(constraints)
 	data_names = lp.data.map{|d|d.name}
 	constraints = constraints.map do |constraint|
