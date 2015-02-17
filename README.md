@@ -11,9 +11,9 @@ subject_to([
 ```
 I try to keep the tests up to date, so take a look in there for more examples.
 
-Please send comments, suggestions, bugs, complaints, party invites to bgodlove88 at gmail.com.
+Please send comments, suggestions, bugs, complaints to bgodlove88 at gmail.com.
 
-A quick view at some examples of functionality:
+A quick view at functionality:
 
 ## Summation and Forall constraints:
 ```
@@ -98,3 +98,24 @@ subject_to([
 ]
 ))
 ```
+
+## Plans for future:
+* Informative errors
+* Support for absolute value constraints
+```
+lp = maximize(
+	"x",
+subject_to([
+	"abs(x) <= 4"
+]))
+```
+* Support for or constraints
+```
+lp = maximize(
+ 	"x",
+subject_to([
+	"x <= 10 or x <= 20"
+]))
+```
+* Support for if --> then constraints
+* Wrappers for sudoku, kenken, knapsack, and TSP
