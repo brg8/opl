@@ -114,7 +114,7 @@ subject_to([
 lp = maximize(
  	"x",
 subject_to([
-	"x <= 10 or x <= 20"
+	"x <= 10 or x >= 20"
 ]))
 ```
 * Support for if --> then constraints
