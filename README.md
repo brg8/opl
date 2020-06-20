@@ -11,8 +11,6 @@ subject_to([
 ```
 I try to keep the tests up to date, so take a look in there for more examples.
 
-Please send comments, suggestions, bugs, complaints to bgodlove88 at gmail.com.
-
 A quick view at functionality:
 
 ## Summation and Forall constraints:
