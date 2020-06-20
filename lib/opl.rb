@@ -1,6 +1,7 @@
 require "rglpk"
-require_relative "string.rb"
 require_relative "array.rb"
+require_relative "string.rb"
+require_relative "sudoku.rb"
 
 # Notes for future functionality
 #

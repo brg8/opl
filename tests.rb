@@ -1,6 +1,5 @@
 require "rspec"
 require "./lib/opl.rb"
-require "./lib/sudoku.rb"
 
 describe "lpsolve" do
 	before :all do
@@ -604,7 +603,7 @@ describe "lpsolve" do
 		  [0,4,0,0,5,0,0,3,6],
 		  [7,0,3,0,1,8,0,0,0]
 		]
-		sudoku = Sudoku.new problem
+		sudoku = OPL::Sudoku.new problem
 		sudoku.solve
 		sudoku.format_solution
 

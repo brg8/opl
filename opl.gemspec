@@ -8,6 +8,6 @@ Gem::Specification.new do |s|
 	s.email = "bgodlove88@gmail.com"
 	s.files = ["lib/array.rb", "lib/opl.rb", "lib/string.rb", "lib/sudoku.rb"]
 	s.homepage = "http://github.com/brg8/opl"
-	s.license = "GNU"
-	s.add_runtime_dependency "rglpk"
+	s.license = "MIT"
+	s.add_runtime_dependency "rglpk", "~> 0.4.0"
 end
