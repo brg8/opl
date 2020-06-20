@@ -1115,7 +1115,11 @@ def optimize(optimization, objective, lp)
 	end
 	lp.solution = answer
 	lp.rglpk_object = p
-	lp.matrix_solution = lp.solution_as_matrix
+	begin
+		lp.matrix_solution = lp.solution_as_matrix
+	rescue
+		return lp
+	end
 	if lp.stop_processing
 		lp.solution = lp.error_message
 		lp.matrix_solution = lp.error_message

@@ -1,5 +1,6 @@
 require "rspec"
 require "./lib/opl.rb"
+require "./lib/sudoku.rb"
 
 describe "lpsolve" do
 	before :all do
@@ -592,7 +593,7 @@ describe "lpsolve" do
 	end
 
 	it "solves this sudoku" do
-		d = [
+		problem = [
 		  [0,0,0,2,6,0,7,0,1],
 		  [6,8,0,0,7,0,0,9,0],
 		  [1,9,0,0,0,4,5,0,0],
@@ -603,56 +604,11 @@ describe "lpsolve" do
 		  [0,4,0,0,5,0,0,3,6],
 		  [7,0,3,0,1,8,0,0,0]
 		]
+		sudoku = Sudoku.new problem
+		sudoku.solve
+		sudoku.format_solution
 
-		size = d.count
-		rubysize = size-1
-
-		constant_constraints = []
-		d.each_index do |i|
-			row = d[i]
-
-			row.each_index do |j|
-				element = d[i][j]
-
-				if element != 0
-					constant_constraints << "x[#{i}][#{j}][#{element-1}] = 1"
-				end
-			end
-		end
-
-		gridconstraints = []
-		arr = [0,3,6]
-	  arr.each do |u|
-	    arr.each do |v|
-	      gridconstraints << "forall(k in (0..#{rubysize}), sum(i in (#{u}..#{(size/3)-1+u}), j in (#{v}..#{(size/3)-1+v}), x[i][j][k]) = 1)"
-	    end
-	  end
-
-	  lp = minimize("y", subject_to([
-	    "y = 2",# y is a dummy variable so I don't have to worry about the objective function
-	    "forall(i in (0..#{rubysize}), j in (0..#{rubysize}), sum(k in (0..#{rubysize}), x[i][j][k]) = 1)",# an element contains only one number
-	    "forall(i in (0..#{rubysize}), k in (0..#{rubysize}), sum(j in (0..#{rubysize}), x[i][j][k]) = 1)",# every row contains every number
-	    "forall(j in (0..#{rubysize}), k in (0..#{rubysize}), sum(i in (0..#{rubysize}), x[i][j][k]) = 1)",# every column contains every number
-	    # gridconstraints,# every 3x3 grid contains every number
-	    "forall(u in [0,3,6], v in [0,3,6], k in (0..#{rubysize}), sum(i in ((0+u)..(#{(size/3)-1}+u)), j in ((0+v)..(#{(size/3)-1}+v)), x[i][j][k]) = 1)",# every 3x3 grid contains every number
-	    constant_constraints# some elements already have their values set
-	  ].flatten,["BOOLEAN: x"]))
-
-	  mat = lp.matrix_solution["x"]
-
-	  sol = Array.new(mat[0][0].size) { Array.new(mat[0][0].size, 0) }
-
-	  mat.each_index do |i|
-	    mat[i].each_index do |j|
-	      mat[i][j].each_index do |k|
-	        if mat[i][j][k].to_f == 1.0
-	          sol[i][j] = k+1
-	        end
-	      end
-	    end
-	  end;""
-
-	  sol.should eq(
+		sudoku.solution.should eq(
 	  	[
 	  	[4, 3, 5, 2, 6, 9, 7, 8, 1],
 			[6, 8, 2, 5, 7, 1, 4, 9, 3],
@@ -666,95 +622,4 @@ describe "lpsolve" do
 			]
 		)
 	end
-
-	# it "solves problem 35" do
-	# 	lp = maximize(
-	# 		"x",
-	# 	subject_to([
-	# 		"x <= 10 or x <= 20"
-	# 	])
-	# 	)
-	# 	lp.solution["x"].to_f.round(2).should eq 20.0
-	# end
-=begin
-	it "solves problem 35" do
-		lp = maximize(
-			"x",
-		subject_to([
-			"abs(x) <= 4"
-		],[
-		]))
-		lp.solution["x"].to_f.round(2).should eq 4.0
-	end
-
-	it "solves problem 36" do
-		lp = maximize(
-			"x + y + z",
-		subject_to([
-			"4 + abs(x + 4*y) <= 4*z",
-			"abs(-3*x + z) <= 3",
-			"z <= 3"
-		],[
-		]))
-		lp.solution["x"].to_f.round(2).should eq 2.0
-		lp.solution["y"].to_f.round(2).should eq 1.5
-		lp.solution["z"].to_f.round(2).should eq 3.0
-	end
-=end
-#
-#	it "solves problem 37" do
-#		lp = maximize(
-#			"x + y + z",
-#		subject_to([
-#			"4 + abs(x + 4*y) + abs(x) <= 4*z",
-#			"abs(-3*x + z) <= 3",
-#			"z <= 3"
-#		],[
-#		]))
-#	end
-=begin
-	it "solves problem 38" do
-		lp = minimize(
-			"sum(i in (0..3), x[i])",
-		subject_to([
-			"forall(i in (0..2), abs(x[i] - x[i+1]) <= 3)",
-			"forall(i in (0..2), abs(x[i]) <= 10)"
-		],[
-		]))
-		lp.solution_as_matrix["x"].should eq [-10.0, -10.0, -10.0, -13.0]
-	end
-=end
-=begin
-	it "solves problem 36" do
-		lp = minimize(
-			"abs(x)",
-		subject_to([
-			"x <= 4",
-		],[
-		]))
-		lp.solution["x"].should eq 0.0
-	end
-
-	it "solves problem 37" do
-		lp = minimize(
-			"abs(x[0] + x[1])",
-		subject_to([
-			"forall(i in (0..1), x[i] <= 2)",
-			"forall(i in (0..1), x[i] >= 1)"
-		],[
-		]))
-		lp.solution["x"].should eq 1.0
-	end
-
-	it "solves problem 38" do
-		lp = minimize(
-			"sum(i in (0..2), abs(x[i]))",
-		subject_to([
-			"forall(i in (0..2), x[i] <= 3)",
-			"forall(i in (0..2), x[i] >= 2)"
-		],[
-		]))
-		lp.solution["x"].should eq 2.0
-	end
-=end
 end
