@@ -20,10 +20,10 @@ describe "lpsolve" do
 			"x2 >= 0",
 			"x3 >= 0"
 		]))
-		lp.solution["x1"].to_f.round(2).should eq 33.33
-		lp.solution["x2"].to_f.round(2).should eq 66.67
-		lp.solution["x3"].to_f.round(2).should eq 0.0
-		lp.objective.optimized_value.to_f.round(2).should eq 733.33
+		expect(lp.solution["x1"].to_f.round(2)).to eq 33.33
+		expect(lp.solution["x2"].to_f.round(2)).to eq 66.67
+		expect(lp.solution["x3"].to_f.round(2)).to eq 0.0
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq 733.33
 	end
 
 	it "solves problem 2" do
@@ -36,10 +36,10 @@ describe "lpsolve" do
 			"y >= 0",
 			"z >= 0"
 		]))
-		lp.solution["x"].to_f.round(2).should eq 1.67
-		lp.solution["y"].to_f.round(2).should eq 0.67
-		lp.solution["z"].to_f.round(2).should eq 0.0
-		lp.objective.optimized_value.to_f.round(2).should eq 2.33
+		expect(lp.solution["x"].to_f.round(2)).to eq 1.67
+		expect(lp.solution["y"].to_f.round(2)).to eq 0.67
+		expect(lp.solution["z"].to_f.round(2)).to eq 0.0
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq 2.33
 	end
 
 	it "solves problem 3" do
@@ -50,9 +50,9 @@ describe "lpsolve" do
 			"c + x4 <= 10",
 			"c >= 0"
 		]))
-		lp.solution["c"].to_f.round(2).should eq 0.0
-		lp.solution["x4"].to_f.round(2).should eq 10.0
-		lp.objective.optimized_value.to_f.round(2).should eq -10.0
+		expect(lp.solution["c"].to_f.round(2)).to eq 0.0
+		expect(lp.solution["x4"].to_f.round(2)).to eq 10.0
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq -10.0
 	end
 
 	it "solves problem 4" do
@@ -62,10 +62,10 @@ describe "lpsolve" do
 			"x[1] + x[3] <= 3",
 			"y <= 4",
 		]))
-		lp.solution["x[1]"].to_f.round(2).should eq 3.0
-		lp.solution["x[3]"].to_f.round(2).should eq 0.0
-		lp.solution["y"].to_f.round(2).should eq 4.0
-		lp.objective.optimized_value.to_f.round(2).should eq 7.0
+		expect(lp.solution["x[1]"].to_f.round(2)).to eq 3.0
+		expect(lp.solution["x[3]"].to_f.round(2)).to eq 0.0
+		expect(lp.solution["y"].to_f.round(2)).to eq 4.0
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq 7.0
 	end
 
 	it "solves problem 5" do
@@ -76,8 +76,8 @@ describe "lpsolve" do
 			"x[0] >= 0",
 			"x[3] >= 0"
 		]))
-		(lp.solution=={"x[1]"=>"3.0", "x[2]"=>"0.0", "x[0]"=>"0.0", "x[3]"=>"0.0"}).should eq true
-		lp.objective.optimized_value.to_f.round(2).should eq 3.0
+		expect((lp.solution=={"x[1]"=>"3.0", "x[2]"=>"0.0", "x[0]"=>"0.0", "x[3]"=>"0.0"})).to eq true
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq 3.0
 	end
 
 	it "solves problem 6" do
@@ -88,8 +88,8 @@ describe "lpsolve" do
 			"x[0] >= 0",
 			"x[3] >= 0"
 		]))
-		(lp.solution=={"x[1]"=>"3.0", "x[2]"=>"0.0", "x[0]"=>"0.0", "x[3]"=>"0.0"}).should eq true
-		lp.objective.optimized_value.to_f.round(2).should eq 3.0
+		expect((lp.solution=={"x[1]"=>"3.0", "x[2]"=>"0.0", "x[0]"=>"0.0", "x[3]"=>"0.0"})).to eq true
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq 3.0
 	end
 
 	it "solves problem 7" do
@@ -103,8 +103,8 @@ describe "lpsolve" do
 			"x[2] >= 0",
 			"x[3] >= 0"
 		]))
-		(lp.solution=={"x[1]"=>"3.0", "x[2]"=>"0.0", "z"=>"3.0", "x[0]"=>"0.0", "x[3]"=>"0.0"}).should eq true
-		lp.objective.optimized_value.to_f.round(2).should eq 6.0
+		expect((lp.solution=={"x[1]"=>"3.0", "x[2]"=>"0.0", "z"=>"3.0", "x[0]"=>"0.0", "x[3]"=>"0.0"})).to eq true
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq 6.0
 	end
 
 	it "solves problem 8" do
@@ -116,11 +116,11 @@ describe "lpsolve" do
 			"x[1][0] <= 1",
 			"x[0][0] + x[0][1] >= 0"
 		]))
-		lp.solution["x[1][0]"].to_f.round(2).should eq 1.0
-		lp.solution["x[1][1]"].to_f.round(2).should eq 2.0
-		lp.solution["x[0][0]"].to_f.round(2).should eq 0.0
-		lp.solution["x[0][1]"].to_f.round(2).should eq 0.0
-		lp.objective.optimized_value.to_f.round(2).should eq 3.0
+		expect(lp.solution["x[1][0]"].to_f.round(2)).to eq 1.0
+		expect(lp.solution["x[1][1]"].to_f.round(2)).to eq 2.0
+		expect(lp.solution["x[0][0]"].to_f.round(2)).to eq 0.0
+		expect(lp.solution["x[0][1]"].to_f.round(2)).to eq 0.0
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq 3.0
 	end
 
 	it "solves problem 9" do
@@ -129,8 +129,8 @@ describe "lpsolve" do
 		subject_to([
 			"sum(i in (0..1), j in [0,1], x[i][j]) >= 10"
 		]))
-		(lp.solution=={"x[0][0]"=>"10.0", "x[0][1]"=>"0.0", "x[1][0]"=>"0.0", "x[1][1]"=>"0.0"}).should eq true
-		lp.objective.optimized_value.to_f.round(2).should eq 10.0
+		expect((lp.solution=={"x[0][0]"=>"10.0", "x[0][1]"=>"0.0", "x[1][0]"=>"0.0", "x[1][1]"=>"0.0"})).to eq true
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq 10.0
 	end
 
 	it "solves problem 10" do
@@ -143,8 +143,8 @@ describe "lpsolve" do
 			"x[2] >= 0",
 			"x[3] >= 0"
 		]))
-		(lp.solution=={"x[0]"=>"0.0", "x[1]"=>"0.0", "x[2]"=>"10.0", "x[3]"=>"0.0"}).should eq true
-		lp.objective.optimized_value.to_f.round(2).should eq 10.0
+		expect((lp.solution=={"x[0]"=>"0.0", "x[1]"=>"0.0", "x[2]"=>"10.0", "x[3]"=>"0.0"})).to eq true
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq 10.0
 	end
 
 	it "solves problem 11" do
@@ -154,8 +154,8 @@ describe "lpsolve" do
 			"sum(i in (0..1), j in (0..3), 2x[i] - 3x[j]) >= 20",
 			"forall(i in (0..3), j in (2..3), x[i] >= 0)"
 		]))
-		(lp.solution=={"x[0]"=>"10.0", "x[1]"=>"0.0", "x[2]"=>"0.0", "x[3]"=>"0.0"}).should eq true
-		lp.objective.optimized_value.to_f.round(2).should eq 20.0
+		expect((lp.solution=={"x[0]"=>"10.0", "x[1]"=>"0.0", "x[2]"=>"0.0", "x[3]"=>"0.0"})).to eq true
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq 20.0
 	end
 
 	it "solves problem 12" do
@@ -164,10 +164,10 @@ describe "lpsolve" do
 		subject_to([
 			"forall(i in (0..2), x[i] <= 5)"
 		]))
-		lp.solution["x[0]"].to_f.round(2).should eq 5.0
-		lp.solution["x[1]"].to_f.round(2).should eq 5.0
-		lp.solution["x[2]"].to_f.round(2).should eq 5.0
-		lp.objective.optimized_value.to_f.round(2).should eq 15.0
+		expect(lp.solution["x[0]"].to_f.round(2)).to eq 5.0
+		expect(lp.solution["x[1]"].to_f.round(2)).to eq 5.0
+		expect(lp.solution["x[2]"].to_f.round(2)).to eq 5.0
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq 15.0
 	end
 
 	it "solves problem 13" do
@@ -178,8 +178,8 @@ describe "lpsolve" do
 			"forall(i in (0..3), sum(j in (0..i), x[i][j]) >= i)",
 			"forall(i in (0..3), j in (0..3), x[i][j] >= 0)"
 		]))
-		(lp.solution=={"x[0][0]"=>"0.0", "x[0][1]"=>"0.0", "x[0][2]"=>"0.0", "x[0][3]"=>"0.0", "x[1][1]"=>"1.0", "x[1][2]"=>"0.0", "x[1][3]"=>"0.0", "x[2][2]"=>"2.0", "x[2][3]"=>"0.0", "x[3][3]"=>"3.0", "x[1][0]"=>"0.0", "x[2][0]"=>"0.0", "x[2][1]"=>"0.0", "x[3][0]"=>"0.0", "x[3][1]"=>"0.0", "x[3][2]"=>"0.0"}).should eq true
-		lp.objective.optimized_value.to_f.round(2).should eq 6.0
+		expect((lp.solution=={"x[0][0]"=>"0.0", "x[0][1]"=>"0.0", "x[0][2]"=>"0.0", "x[0][3]"=>"0.0", "x[1][1]"=>"1.0", "x[1][2]"=>"0.0", "x[1][3]"=>"0.0", "x[2][2]"=>"2.0", "x[2][3]"=>"0.0", "x[3][3]"=>"3.0", "x[1][0]"=>"0.0", "x[2][0]"=>"0.0", "x[2][1]"=>"0.0", "x[3][0]"=>"0.0", "x[3][1]"=>"0.0", "x[3][2]"=>"0.0"})).to eq true
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq 6.0
 	end
 
 	it "solves problem 14" do
@@ -188,8 +188,8 @@ describe "lpsolve" do
 		subject_to([
 			"x + 9 <= 10"
 		]))
-		lp.solution["x"].to_f.round(2).should eq 1.0
-		lp.objective.optimized_value.to_f.round(2).should eq 4.0
+		expect(lp.solution["x"].to_f.round(2)).to eq 1.0
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq 4.0
 	end
 
 	it "solves problem 15" do
@@ -200,10 +200,10 @@ describe "lpsolve" do
 			"y < 3",
 			"z > 4"
 		]))
-		lp.solution["x"].to_f.round(2).should eq 5.0
-		lp.solution["y"].to_f.round(2).should eq 2.99
-		lp.solution["z"].to_f.round(2).should eq 4.01
-		lp.objective.optimized_value.to_f.round(2).should eq 3.98
+		expect(lp.solution["x"].to_f.round(2)).to eq 5.0
+		expect(lp.solution["y"].to_f.round(2)).to eq 2.99
+		expect(lp.solution["z"].to_f.round(2)).to eq 4.01
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq 3.98
 	end
 
 	it "solves problem 16" do
@@ -213,9 +213,9 @@ describe "lpsolve" do
 			"x - 2.3 = 5.2",
 			"3.2y <= 3",
 		]))
-		lp.solution["x"].to_f.round(2).should eq 7.5
-		lp.solution["y"].to_f.round(2).should eq 0.94
-		lp.objective.optimized_value.to_f.round(2).should eq 8.44
+		expect(lp.solution["x"].to_f.round(2)).to eq 7.5
+		expect(lp.solution["y"].to_f.round(2)).to eq 0.94
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq 8.44
 	end
 
 	it "solves problem 17" do
@@ -228,8 +228,8 @@ describe "lpsolve" do
 			"BOOLEAN: x"
 		]
 		))
-		lp.solution["x"].to_f.round(2).should eq 1.0
-		lp.objective.optimized_value.to_f.round(2).should eq 1.0
+		expect(lp.solution["x"].to_f.round(2)).to eq 1.0
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq 1.0
 	end
 
 	it "solves problem 18" do
@@ -241,8 +241,8 @@ describe "lpsolve" do
 			"INTEGER: x"
 		]
 		))
-		lp.solution["x"].to_f.round(2).should eq 9.0
-		lp.objective.optimized_value.to_f.round(2).should eq 9.0
+		expect(lp.solution["x"].to_f.round(2)).to eq 9.0
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq 9.0
 	end
 
 	it "solves problem 19" do
@@ -260,10 +260,10 @@ describe "lpsolve" do
 			"INTEGER: x3"
 		]
 		))
-		lp.solution["x1"].to_f.round(2).should eq 1.0
-		lp.solution["x2"].to_f.round(2).should eq 99.0
-		lp.solution["x3"].to_f.round(2).should eq 0.0
-		lp.objective.optimized_value.to_f.round(2).should eq 604.0
+		expect(lp.solution["x1"].to_f.round(2)).to eq 1.0
+		expect(lp.solution["x2"].to_f.round(2)).to eq 99.0
+		expect(lp.solution["x3"].to_f.round(2)).to eq 0.0
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq 604.0
 	end
 
 	it "solves problem 20" do
@@ -278,10 +278,10 @@ describe "lpsolve" do
 			"INTEGER: x, y",
 		]
 		))
-		lp.solution["x"].to_f.round(2).should eq 2.0
-		lp.solution["x[3]"].to_f.round(2).should eq 0.0
-		lp.solution["y"].to_f.round(2).should eq 4.0
-		lp.objective.optimized_value.to_f.round(2).should eq 6.0
+		expect(lp.solution["x"].to_f.round(2)).to eq 2.0
+		expect(lp.solution["x[3]"].to_f.round(2)).to eq 0.0
+		expect(lp.solution["y"].to_f.round(2)).to eq 4.0
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq 6.0
 	end
 
 	it "solves problem 21" do
@@ -295,10 +295,10 @@ describe "lpsolve" do
 			"EPSILON: 0.03"
 		]
 		))
-		lp.solution["x"].to_f.round(2).should eq 1.97
-		lp.solution["z"].to_f.round(2).should eq 0.0
-		lp.solution["y"].to_f.round(2).should eq 4.0
-		lp.objective.optimized_value.to_f.round(2).should eq 5.97
+		expect(lp.solution["x"].to_f.round(2)).to eq 1.97
+		expect(lp.solution["z"].to_f.round(2)).to eq 0.0
+		expect(lp.solution["y"].to_f.round(2)).to eq 4.0
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq 5.97
 	end
 
 	it "solves problem 22" do
@@ -307,8 +307,8 @@ describe "lpsolve" do
 		subject_to([
 			"x <= -1"
 		]))
-		lp.solution["x"].to_f.round(2).should eq -1.0
-		lp.objective.optimized_value.to_f.round(2).should eq -1.0
+		expect(lp.solution["x"].to_f.round(2)).to eq -1.0
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq -1.0
 	end
 
 	it "solves problem 23" do
@@ -319,10 +319,10 @@ describe "lpsolve" do
 			"y = x",
 			"z <= 2x"
 		]))
-		lp.solution["x"].to_f.round(2).should eq 5.0
-		lp.solution["y"].to_f.round(2).should eq 5.0
-		lp.solution["z"].to_f.round(2).should eq 10.0
-		lp.objective.optimized_value.to_f.round(2).should eq 20.0
+		expect(lp.solution["x"].to_f.round(2)).to eq 5.0
+		expect(lp.solution["y"].to_f.round(2)).to eq 5.0
+		expect(lp.solution["z"].to_f.round(2)).to eq 10.0
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq 20.0
 	end
 
 	it "solves problem 24" do
@@ -333,11 +333,11 @@ describe "lpsolve" do
 		],[
 			"BOOLEAN: x, y, z"
 		]))
-		lp.solution["x"].to_f.round(2).should eq 0.0
-		lp.solution["y"].to_f.round(2).should eq 0.0
-		lp.solution["z"].to_f.round(2).should eq 1.0
-		lp.solution["x[3]"].to_f.round(2).should eq 1.0
-		lp.objective.optimized_value.to_f.round(2).should eq 2.0
+		expect(lp.solution["x"].to_f.round(2)).to eq 0.0
+		expect(lp.solution["y"].to_f.round(2)).to eq 0.0
+		expect(lp.solution["z"].to_f.round(2)).to eq 1.0
+		expect(lp.solution["x[3]"].to_f.round(2)).to eq 1.0
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq 2.0
 	end
 
 	it "solves problem 25" do
@@ -352,12 +352,12 @@ describe "lpsolve" do
 			"NONNEGATIVE: x, x1, x2, x3"
 		]
 		))
-		lp.solution["x1"].to_f.round(2).should eq 33.33
-		lp.solution["x2"].to_f.round(2).should eq 66.67
-		lp.solution["x3"].to_f.round(2).should eq 0.0
-		lp.solution["x[1]"].to_f.round(2).should eq 0.0
-		lp.solution["x[3]"].to_f.round(2).should eq 0.0
-		lp.objective.optimized_value.to_f.round(2).should eq 733.33
+		expect(lp.solution["x1"].to_f.round(2)).to eq 33.33
+		expect(lp.solution["x2"].to_f.round(2)).to eq 66.67
+		expect(lp.solution["x3"].to_f.round(2)).to eq 0.0
+		expect(lp.solution["x[1]"].to_f.round(2)).to eq 0.0
+		expect(lp.solution["x[3]"].to_f.round(2)).to eq 0.0
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq 733.33
 	end
 
 	it "solves problem 26" do
@@ -370,10 +370,10 @@ describe "lpsolve" do
 			"INTEGER: x"
 		]
 		))
-		lp.solution["x[1]"].to_f.round(2).should eq 53.0
-		lp.solution["x[2]"].to_f.round(2).should eq 53.0
-		lp.solution["x[3]"].to_f.round(2).should eq -20.0
-		lp.objective.optimized_value.to_f.round(2).should eq 777.93
+		expect(lp.solution["x[1]"].to_f.round(2)).to eq 53.0
+		expect(lp.solution["x[2]"].to_f.round(2)).to eq 53.0
+		expect(lp.solution["x[3]"].to_f.round(2)).to eq -20.0
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq 777.93
 	end
 
 	it "solves problem 27" do
@@ -388,10 +388,10 @@ describe "lpsolve" do
 			"DATA: {d => [1, 0.3, 1.5], o => [10.3, 4.0005, -1]}"
 		]
 		))
-		lp.solution["x[0]"].to_f.round(2).should eq 70.0
-		lp.solution["x[1]"].to_f.round(2).should eq 233.0
-		lp.solution["x[2]"].to_f.round(2).should eq 27.0
-		lp.objective.optimized_value.to_f.round(2).should eq 1626.12
+		expect(lp.solution["x[0]"].to_f.round(2)).to eq 70.0
+		expect(lp.solution["x[1]"].to_f.round(2)).to eq 233.0
+		expect(lp.solution["x[2]"].to_f.round(2)).to eq 27.0
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq 1626.12
 	end
 
 	it "solves problem 28" do
@@ -403,8 +403,8 @@ describe "lpsolve" do
 			"DATA: {d => 3}"
 		]
 		))
-		lp.solution["x"].to_f.round(2).should eq 3.0
-		lp.objective.optimized_value.to_f.round(2).should eq 9.0
+		expect(lp.solution["x"].to_f.round(2)).to eq 3.0
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq 9.0
 	end
 
 	it "solves problem 29" do
@@ -420,10 +420,10 @@ describe "lpsolve" do
 			"DATA: {d => [1, 0.3, 1.5], o => [10.3, 4.0005, -1]}"
 		]
 		))
-		lp.solution["x[0]"].to_f.round(2).should eq 70.0
-		lp.solution["x[1]"].to_f.round(2).should eq 233.0
-		lp.solution["x[2]"].to_f.round(2).should eq 27.0
-		lp.objective.optimized_value.to_f.round(2).should eq 1626.12
+		expect(lp.solution["x[0]"].to_f.round(2)).to eq 70.0
+		expect(lp.solution["x[1]"].to_f.round(2)).to eq 233.0
+		expect(lp.solution["x[2]"].to_f.round(2)).to eq 27.0
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq 1626.12
 	end
 
 	it "solves problem 30" do
@@ -436,9 +436,9 @@ describe "lpsolve" do
 			"DATA: {c => [3.3, 4.7], d => 4}"
 		]
 		))
-		lp.solution["x[0]"].to_f.round(2).should eq 0.0
-		lp.solution["x[1]"].to_f.round(2).should eq 10.0
-		lp.objective.optimized_value.to_f.round(2).should eq 51.0
+		expect(lp.solution["x[0]"].to_f.round(2)).to eq 0.0
+		expect(lp.solution["x[1]"].to_f.round(2)).to eq 10.0
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq 51.0
 	end
 
 	it "solves problem 31" do
@@ -451,9 +451,9 @@ describe "lpsolve" do
 			"DATA: {c => [3.3, 4.7], d => 4}"
 		]
 		))
-		lp.solution["x[0]"].to_f.round(2).should eq 0.0
-		lp.solution["x[1]"].to_f.round(2).should eq 10.0
-		lp.objective.optimized_value.to_f.round(2).should eq 83.0
+		expect(lp.solution["x[0]"].to_f.round(2)).to eq 0.0
+		expect(lp.solution["x[1]"].to_f.round(2)).to eq 10.0
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq 83.0
 	end
 
 	it "solves problem 32" do
@@ -467,8 +467,8 @@ describe "lpsolve" do
 			"DATA: {d => [[3,5,3],[1,2,3],[2,5,9]]}"
 		]
 		))
-		(lp.solution=={"x[0][1]"=>"100.0", "x[1][1]"=>"100.0", "x[0][0]"=>"200.0", "x[0][2]"=>"0.0", "x[1][0]"=>"200.0", "x[1][2]"=>"0.0", "x[2][0]"=>"0.0", "x[2][1]"=>"0.0", "x[2][2]"=>"0.0"}).should eq true
-		lp.objective.optimized_value.to_f.round(2).should eq 2600.0
+		expect((lp.solution=={"x[0][1]"=>"100.0", "x[1][1]"=>"100.0", "x[0][0]"=>"200.0", "x[0][2]"=>"0.0", "x[1][0]"=>"200.0", "x[1][2]"=>"0.0", "x[2][0]"=>"0.0", "x[2][1]"=>"0.0", "x[2][2]"=>"0.0"})).to eq true
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq 2600.0
 	end
 
 	it "solves problem 33" do
@@ -483,8 +483,8 @@ describe "lpsolve" do
 			"DATA: {d => #{d}}"
 		]
 		))
-		(lp.solution=={"x[0][1]"=>"100.0", "x[1][1]"=>"100.0", "x[0][0]"=>"200.0", "x[0][2]"=>"0.0", "x[1][0]"=>"200.0", "x[1][2]"=>"0.0", "x[2][0]"=>"0.0", "x[2][1]"=>"0.0", "x[2][2]"=>"0.0"}).should eq true
-		lp.objective.optimized_value.to_f.round(2).should eq 2600.0
+		expect((lp.solution=={"x[0][1]"=>"100.0", "x[1][1]"=>"100.0", "x[0][0]"=>"200.0", "x[0][2]"=>"0.0", "x[1][0]"=>"200.0", "x[1][2]"=>"0.0", "x[2][0]"=>"0.0", "x[2][1]"=>"0.0", "x[2][2]"=>"0.0"})).to eq true
+		expect(lp.objective.optimized_value.to_f.round(2)).to eq 2600.0
 	end
 
 	it "solves problem 33" do
@@ -497,8 +497,8 @@ describe "lpsolve" do
 			"DATA: {d => [[[4.0, -2.0], [-2.0, -2.0], [4, -2.0], [-5, -2.0], [1, -2.0]], [[4, -2.0], [2, -2.0], [-5.0, -2.0], [0.5, -2.0], [2, -2.0]], [[4.5, -2.0], [0.3, -2.0], [1.3, -2.0], [2, -2.0], [-2.4, -2.0]], [[4.0, -2.0], [-2.0, -2.0], [4, -2.0], [-5, -2.0], [1, -2.0]], [[4, -2.0], [2, -2.0], [-5.0, -2.0], [0.5, -2.0], [2, -2.0]]]}"
 		]
 		))
-		lp.matrix_solution["x"].should eq [[[0.0, 100.0], [0.0, 0.0], [0.0, 100.0], [0.0, 100.0], [0.0, 0.0]], [[0.0, 100.0], [0.0, 100.0], [0.0, 100.0], [0.0, 0.0], [0.0, 0.0]], [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], [[0.0, 100.0], [0.0, 0.0], [0.0, 100.0], [0.0, 100.0], [0.0, 0.0]], [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]]]
-		lp.objective.optimized_value.should eq 1260.0
+		expect(lp.matrix_solution["x"]).to eq [[[0.0, 100.0], [0.0, 0.0], [0.0, 100.0], [0.0, 100.0], [0.0, 0.0]], [[0.0, 100.0], [0.0, 100.0], [0.0, 100.0], [0.0, 0.0], [0.0, 0.0]], [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], [[0.0, 100.0], [0.0, 0.0], [0.0, 100.0], [0.0, 100.0], [0.0, 0.0]], [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]]]
+		expect(lp.objective.optimized_value).to eq 1260.0
 	end
 
 	it "checks for comma placement in sum() statements" do
@@ -511,7 +511,7 @@ describe "lpsolve" do
 				"NONNEGATIVE: x"
 			]))
 		rescue Exception => e
-			e.to_s.should eq "The following sum() constraint is incorrectly formatted: i in [0, 1, 2, 3] x[i]. Please see the examples in test.rb for sum() constraints. I suspect you are missing a comma somewhere."
+			expect(e.to_s).to eq "The following sum() constraint is incorrectly formatted: i in [0, 1, 2, 3] x[i]. Please see the examples in test.rb for sum() constraints. I suspect you are missing a comma somewhere."
 		end
 	end
 
@@ -525,7 +525,7 @@ describe "lpsolve" do
 				"NONNEGATIVE: x"
 			]))
 		rescue Exception => e
-			e.to_s.should eq "The following forall() constraint is incorrectly formatted: i in [0, 1, 2, 3] x[i] <= 100. Please see the examples in test.rb for forall() constraints. I suspect you are missing a comma somewhere."
+			expect(e.to_s).to eq "The following forall() constraint is incorrectly formatted: i in [0, 1, 2, 3] x[i] <= 100. Please see the examples in test.rb for forall() constraints. I suspect you are missing a comma somewhere."
 		end
 	end
 
@@ -540,7 +540,7 @@ describe "lpsolve" do
 				"INTEGER: x"
 			]))
 		rescue Exception => e
-			e.to_s.should eq "Options parameter 'NONNEGATIVE x' does not have a colon in it. The proper syntax of an option is TITLE: VALUE"
+			expect(e.to_s).to eq "Options parameter 'NONNEGATIVE x' does not have a colon in it. The proper syntax of an option is TITLE: VALUE"
 		end
 	end
 
@@ -555,7 +555,7 @@ describe "lpsolve" do
 				"INTEGER: x"
 			]))
 		rescue Exception => e
-			e.to_s.should eq "Did not recognize the TITLE parameter 'NONNEGATIVEs' in the options."
+			expect(e.to_s).to eq "Did not recognize the TITLE parameter 'NONNEGATIVEs' in the options."
 		end
 	end
 
@@ -573,7 +573,7 @@ describe "lpsolve" do
 			"BOOLEAN: x",
 			"DATA: {d => [[0,1.3,0],[0,0,1.7],[1.2,0,0]]}"
 		]))
-		lp.matrix_solution["x"].should eq [[0.0, 0.0, 1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
+		expect(lp.matrix_solution["x"]).to eq [[0.0, 0.0, 1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
 	end
 
 	it "makes sure that there are no equality statements in sum() consraints" do
@@ -588,7 +588,7 @@ describe "lpsolve" do
 				"DATA: {d => [[0,1.3,0],[0,0,1.7],[1.2,0,0]]}"
 			]))
 		rescue Exception => e
-			e.to_s.should eq "The following sum() constraint cannot have a equalities in it (a.k.a. =, <, >): j in [0, 1, 2], x[0][j] <= 1"
+			expect(e.to_s).to eq "The following sum() constraint cannot have a equalities in it (a.k.a. =, <, >): j in [0, 1, 2], x[0][j] <= 1"
 		end
 	end
 
@@ -608,7 +608,7 @@ describe "lpsolve" do
 		sudoku.solve
 		sudoku.format_solution
 
-		sudoku.solution.should eq(
+		expect(sudoku.solution).to eq(
 	  	[
 	  	[4, 3, 5, 2, 6, 9, 7, 8, 1],
 			[6, 8, 2, 5, 7, 1, 4, 9, 3],
