@@ -471,8 +471,9 @@ class OPL
 		end
 
 		def self.sum_indices(constraint)
-			#pieces_to_sub = constraint.scan(/[a-z]\[\d[\d\+\-]+\]/)
-			pieces_to_sub = constraint.scan(/[a-z\]]\[\d[\d\+\-]+\]/)
+			# pieces_to_sub = constraint.scan(/[a-z]\[\d[\d\+\-]+\]/)
+			# pieces_to_sub = constraint.scan(/[a-z\]]\[\d[\d\+\-]+\]/)
+			pieces_to_sub = constraint.scan(/\[[\d\+\-]+\]/)
 			pieces_to_sub.each do |piece|
 				characters_to_sum = piece.scan(/[\d\+\-]+/)[0]
 				index_sum = self.sum_constants(characters_to_sum)
@@ -991,7 +992,7 @@ def subject_to(constraints, options=[])
 		end
 		vars = OPL::Helper.variables(lhs, lp)
 		zero_coef_vars = all_vars - vars
-		row = OPL::Row.new(name, lower_bound, upper_bound, epsilon)
+		row = OPL::Row.new("row-#{rand(10000)}", lower_bound, upper_bound, epsilon)
 		row.constraint = constraint
 		coefs = coefs + zero_coef_vars.map{|z|0}
 		vars = vars + zero_coef_vars
@@ -1128,11 +1129,11 @@ def optimize(optimization, objective, lp)
 		lp.objective = lp.error_message
 	end
 	if lp.rglpk_object.status.to_s == "4"
-		raise "There is no feasible solution."
+		puts "There is no feasible solution."
 	elsif lp.rglpk_object.status.to_s == "6"
-		raise "The solution is unbounded."
+		puts "The solution is unbounded."
 	elsif lp.rglpk_object.status.to_s == "1"
-		raise "The solution is undefined."
+		puts "The solution is undefined."
 	end
 	lp
 end
