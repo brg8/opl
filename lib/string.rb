@@ -2,9 +2,7 @@ class String
 	def paren_to_array
 		#in: "(2..5)"
 		#out: "[2,3,4,5]"
-		start = self[1].to_i
-		stop = self[-2].to_i
-		(start..stop).map{|i|i}.to_s
+		eval(self).map{|i|i}.to_s
 	end
 
 	def sub_paren_with_array
