@@ -58,10 +58,6 @@ class String
 		end
 	end
 
-	def to_a
-		self.to_array
-	end
-
 	def index_array(str)
 		indices = []
 		string = self
