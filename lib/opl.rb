@@ -563,7 +563,7 @@ class OPL
 			data_string = data_hash_string.gsub("{",",").gsub("}",",")
 			names = data_string.scan(/,[a-z]/).map{|comma_name|comma_name.gsub(",","")}
 			string_values = data_string.scan(/\=\>[\[\d\.\]\,\-]+,/).map{|scanned_value|scanned_value[2..-2]}
-			values = string_values.map{|sv|sv.to_a}
+			values = string_values.map{|sv|sv.to_array}
 			data_hash = {}
 			names.each_index do |i|
 				name = names[i]
